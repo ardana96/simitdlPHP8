@@ -1,38 +1,38 @@
-<?php
-include('../config.php');
-// if(isset($_POST['tombol'])){
-// $idkategori=$_POST['idkategori'];
 
-// $query_delete="delete from tkategori where idkategori='".$idkategori."'";	
-// $update=mysql_query($query_delete);
-// if($update){
-// header("location:../user.php?menu=kategori");}
-// else{
-// header("location:../user.php?menu=kategori");}}
+
+<?php
+include('../config.php'); // Pastikan koneksi menggunakan sqlsrv
 
 if (isset($_POST['tombol'])) {
     // Ambil data dari form
     $idkategori = $_POST['idkategori'];
 
-    // Gunakan prepared statement untuk mencegah SQL Injection
-    $stmt = $mysql->prepare("DELETE FROM tkategori WHERE idkategori = ?");
-    $stmt->bind_param("s", $idkategori);
+    // Query untuk menghapus data
+    $query = "DELETE FROM tkategori WHERE idkategori = ?";
+    $params = array($idkategori);
 
-    // Eksekusi query dan periksa hasilnya
-    if ($stmt->execute()) {
-        header("Location: ../user.php?menu=kategori");
+    // Eksekusi query menggunakan prepared statement
+    $stmt = sqlsrv_query($conn, $query, $params);
+
+    // Periksa hasil eksekusi
+    if ($stmt === false) {
+        // Jika gagal, tangkap error
+        $errors = sqlsrv_errors();
+        $error_message = "Gagal: " . print_r($errors, true);
+        header("Location: ../user.php?menu=kategori&stt=$error_message");
         exit();
     } else {
-        header("Location: ../user.php?menu=kategori&stt=Gagal: " . $mysql->error);
+        // Jika berhasil, arahkan ke halaman sukses
+        header("Location: ../user.php?menu=kategori");
         exit();
     }
 
-    // Tutup statement
-    $stmt->close();
+    // Bebaskan resource statement
+    sqlsrv_free_stmt($stmt);
 }
 
-// Tutup koneksi database
-$mysql->close();
+// Tutup koneksi database (opsional, jika tidak dilakukan di config.php)
+sqlsrv_close($conn);
 
 
 ?>

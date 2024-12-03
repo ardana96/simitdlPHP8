@@ -32,28 +32,72 @@ document.getElementById('jumlah').focus();
 
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
 
             <div class="inner">
@@ -93,17 +137,28 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM bagian");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$id_bagian=$data['id_bagian'];
-				$bagian=$data['bagian'];
-				
-				?>
+                                       <?php
+                                       
+                                       
+                                       $query = "SELECT * FROM bagian";
+                                       $stmt = sqlsrv_query($conn, $query);
+                                       
+                                       // Periksa apakah query berhasil
+                                       if ($stmt === false) {
+                                           die(print_r(sqlsrv_errors(), true));
+                                       }
+                                       
+                                       // Periksa apakah ada hasil
+                                       if (sqlsrv_has_rows($stmt)) {
+                                           while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                            $id_bagian=$data['id_bagian'];
+                                            $bagian=$data['bagian'];
+                                
+				                    ?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $id_bagian ?></td>
-                                            <td><? echo $bagian ?></td>
+                                            <td><?php echo $id_bagian ?></td>
+                                            <td><?php echo $bagian ?></td>
                                      
 											 <td class="center"><button class="btn btn-primary" value='<?php echo $id_bagian; ?>' data-toggle="modal"  data-target="#newReggg" onclick="new sendRequest(this.value)">
                                 Edit 
@@ -115,7 +170,7 @@ function kdauto($tabel, $inisial){
 											</form> </td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -144,7 +199,7 @@ function kdauto($tabel, $inisial){
 	
    <div class="form-group">
                                          
-                                            <input class="form-control" type="text" name="id_bagian" value="<? echo kdauto("bagian","B"); ?>" readonly>
+                                            <input class="form-control" type="text" name="id_bagian" value="<?php echo kdauto("bagian","B"); ?>" readonly>
                                     
                                         </div>
 											

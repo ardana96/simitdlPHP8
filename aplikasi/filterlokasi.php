@@ -1,11 +1,38 @@
-<?php
-include('../config.php');
-$lokasi_id=$_GET['lokasi_id'];
-$query="SELECT * from  lokasi WHERE lokasi_id='".$lokasi_id."' ";
-$get_data=mysql_query($query);
-$hasil=mysql_fetch_array($get_data);
-$lokasi_id=$hasil['lokasi_id'];
-$lokasi_nama=$hasil['lokasi_nama'];
 
-$data=$lokasi_id."&&&".$lokasi_nama;
-echo $data; ?>
+
+<?php
+include('../config.php'); // Pastikan koneksi menggunakan sqlsrv
+
+// Ambil parameter dari URL
+$lokasi_id=$_GET['lokasi_id'];
+$query = "SELECT * from  lokasi WHERE lokasi_id= ?";
+$params = array($lokasi_id);
+$stmt = sqlsrv_query($conn, $query, $params);
+
+if ($stmt === false) {
+    // Jika query gagal, tampilkan pesan error
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Ambil data dari hasil query
+$hasil = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+
+if ($hasil) {
+    // Ambil nilai kolom
+    $lokasi_id=$hasil['lokasi_id'];
+    $lokasi_nama=$hasil['lokasi_nama'];
+
+    // Gabungkan data dengan format tertentu
+    $data=$lokasi_id."&&&".$lokasi_nama;
+    echo $data;
+} else {
+    // Jika data tidak ditemukan
+    echo "Data tidak ditemukan untuk nomor: " . htmlspecialchars($nomor);
+}
+
+// Bebaskan resource statement
+sqlsrv_free_stmt($stmt);
+
+// Tutup koneksi database (opsional, jika tidak dilakukan di config.php)
+sqlsrv_close($conn);
+?>

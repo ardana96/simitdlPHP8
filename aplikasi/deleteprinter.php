@@ -1,12 +1,36 @@
 <?php
-include('../config.php');
-if(isset($_POST['tombol'])){
-$nomor=$_POST['nomor'];
+include('../config.php'); // Pastikan koneksi menggunakan sqlsrv
 
-$query_delete="delete from printer where nomor='".$nomor."'";	
-$update=mysql_query($query_delete);
-if($update){
-header("location:../user.php?menu=printer");}
-else{
-header("location:../user.php?menu=printer");}}
+if (isset($_POST['tombol'])) {
+    // Ambil data dari form
+    $nomor = $_POST['nomor'];
+
+    // Query untuk menghapus data
+    $query = "DELETE FROM printer WHERE nomor = ?";
+    $params = array($nomor);
+
+    // Eksekusi query menggunakan prepared statement
+    $stmt = sqlsrv_query($conn, $query, $params);
+
+    // Periksa hasil eksekusi
+    if ($stmt === false) {
+        // Jika gagal, tangkap error
+        $errors = sqlsrv_errors();
+        $error_message = "Gagal: " . print_r($errors, true);
+        header("Location: ../user.php?menu=printer&stt=$error_message");
+        exit();
+    } else {
+        // Jika berhasil, arahkan ke halaman sukses
+        header("Location: ../user.php?menu=printer");
+        exit();
+    }
+
+    // Bebaskan resource statement
+    sqlsrv_free_stmt($stmt);
+}
+
+// Tutup koneksi database (opsional, jika tidak dilakukan di config.php)
+sqlsrv_close($conn);
+
+
 ?>

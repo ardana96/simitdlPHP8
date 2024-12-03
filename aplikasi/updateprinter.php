@@ -1,22 +1,49 @@
 <?php
-include('../config.php');
-if(isset($_POST['tombol'])){
-$nomor=$_POST['nomor'];
-$id_perangkat=$_POST['id_perangkat'];
-$printer=$_POST['printer'];
-$keterangan=$_POST['keterangan'];
-$status=$_POST['status'];
-$user = $_POST['user'];
-$lokasi = $_POST['lokasi'];
-$tgl_perawatan = $_POST['tgl_perawatan'];
-$bulan = $_POST['bulan'];
+include('../config.php'); // Pastikan koneksi menggunakan sqlsrv
 
-$query_update="UPDATE printer SET id_perangkat= '".$id_perangkat."',printer= '".$printer."',
-keterangan= '".$keterangan."',status= '".$status."',user= '".$user."', 
-lokasi= '".$lokasi."',tgl_perawatan= '".$tgl_perawatan."',bulan= '".$bulan."' WHERE nomor='".$nomor."'";	
-$update=mysql_query($query_update);
-if($update){
-header("location:../user.php?menu=printer&stt= Update Berhasil");}
-else{
-header("location:../user.php?menu=printer&stt=gagal");}}
+if (isset($_POST['tombol'])) {
+    // Ambil data dari form
+    $nomor = $_POST['nomor'];
+    $id_perangkat = $_POST['id_perangkat'];
+    $printer = $_POST['printer'];
+    $keterangan = $_POST['keterangan'];
+    $status = $_POST['status'];
+    $user = $_POST['user'];
+    $lokasi = $_POST['lokasi'];
+    $tgl_perawatan = $_POST['tgl_perawatan'];
+    $bulan = $_POST['bulan'];
+
+    // Query untuk memperbarui data
+    $query = "UPDATE printer SET id_perangkat = ?, 
+                         printer = ?, 
+                         keterangan = ?, 
+                         status = ?, 
+                         [user] = ?, 
+                         lokasi = ?, 
+                         tgl_perawatan = ?, 
+                         bulan = ?  WHERE nomor = ?";;
+ $params = array($id_perangkat, $printer, $keterangan, $status, $user, $lokasi, $tgl_perawatan, $bulan, $nomor);
+
+    // Eksekusi query menggunakan prepared statement
+    $stmt = sqlsrv_query($conn, $query, $params);
+
+    // Periksa hasil eksekusi
+    if ($stmt === false) {
+        // Jika gagal, tangkap error
+        $errors = sqlsrv_errors();
+        $error_message = "Gagal: " . print_r($errors, true);
+        header("Location: ../user.php?menu=printer&stt=$error_message");
+        exit();
+    } else {
+        // Jika berhasil, arahkan ke halaman sukses
+        header("Location: ../user.php?menu=printer&stt=Update Berhasil");
+        exit();
+    }
+
+    // Bebaskan resource statement
+    sqlsrv_free_stmt($stmt);
+}
+
+// Tutup koneksi database (opsional, jika tidak dilakukan di config.php)
+sqlsrv_close($conn);
 ?>

@@ -1,4 +1,4 @@
-<?include('config.php');?>  
+<?php include('config.php');?>  
 <script language="javascript">
 function createRequestObject() {
 var ajax;
@@ -20,7 +20,7 @@ http.send(null);}}
 function handleResponse(){
 if(http.readyState == 4){
 var string = http.responseText.split('&&&');
-document.getElementById('nomor').value = string[0];  
+document.getElementById('nomor').value = (string[0]).trim();  
 document.getElementById('id_perangkat').value = string[1];
 document.getElementById('printer').value = string[2]; 
 document.getElementById('keterangan').value = string[3];
@@ -37,28 +37,72 @@ document.getElementById('bulan').value = string[8];
 
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength;
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
             <div class="inner">
                 <div class="row">
@@ -103,25 +147,35 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM printer");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$nomor=$data['nomor'];
-				$id_perangkat=$data['id_perangkat'];
-				$printer=$data['printer'];
-				$keterangan=$data['keterangan'];
-				$status=$data['status'];
-			
-			
+                                       <?php
+									   
+				
+
+                                       $query = "SELECT * FROM printer";
+                                       $stmt = sqlsrv_query($conn, $query);
+                                       
+                                       // Periksa apakah query berhasil
+                                       if ($stmt === false) {
+                                           die(print_r(sqlsrv_errors(), true));
+                                       }
+                                       
+                                       // Periksa apakah ada hasil
+                                       if (sqlsrv_has_rows($stmt)) {
+                                           while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                               $nomor = $data['nomor'];
+                                               $id_perangkat = $data['id_perangkat'];
+                                               $printer = $data['printer'];
+                                               $keterangan = $data['keterangan'];
+                                               $status = $data['status'];  
 				?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $nomor ?></td>
-											   <td><? echo $id_perangkat ?></td>
-											      <td><? echo $printer ?></td>
+                                            <td><?php echo $nomor ?></td>
+											   <td><?php echo $id_perangkat ?></td>
+											      <td><?php echo $printer ?></td>
                                   
-                                            <td><? echo $keterangan ?></td>
-											     <td><? echo $status ?></td>
+                                            <td><?php echo $keterangan ?></td>
+											     <td><?php echo $status ?></td>
 									
                              
 											 <td class="center">
@@ -143,7 +197,7 @@ function kdauto($tabel, $inisial){
 											</form> </td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -166,7 +220,7 @@ function kdauto($tabel, $inisial){
                                        <form action="aplikasi/simpanprinter.php" method="post"  enctype="multipart/form-data" name="postform2">
                                        <div class="form-group">
                                          
-                                            <input class="form-control" type="hidden" name="nomor" value="<? echo kdauto("printer",""); ?>" readonly>
+                                            <input class="form-control" type="text" name="nomor" value="<?php echo kdauto("printer",""); ?>" readonly>
                                     
                                         </div>
 										 <div class="form-group">
@@ -202,26 +256,48 @@ function kdauto($tabel, $inisial){
 										
 										<div class="form-group">
 												 Tanggal Perawatan                                    
-                                            <input  placeholder="hh-mm-yyyy" class="form-control" type="text" name="tgl_perawatan" >
+                                            <input  type="date"  class="form-control" type="text" name="tgl_perawatan" >
                                     
                                         </div>
 										<div class="form-group">
 											Bulan Perawatan         
-											<select  class="form-control" name='bulan' >	 <option value=<? echo $id_bulan; ?>><? echo $namabulan; ?> </option>
-												
-												<?	$s2 = mysql_query("SELECT * FROM bulan  ");
-													if(mysql_num_rows($s2) > 0){
-													while($datas2 = mysql_fetch_array($s2)){
-													$id_bulan=$datas2['id_bulan'];
-													$bulan=$datas2['bulan'];
-													?>
-												 <option value="<? echo $id_bulan; ?>"> <? echo $bulan; ?>
-												 </option>
-												 
-												 <?}}?>
-												
-										
-											</select>        
+											      
+                                            <select class="form-control" name="bulan">
+                                                    <option value="">Pilih Bulan</option>
+                                                    
+                                                    <?php
+                                                    
+                                                    // Query untuk mengambil semua data dari tabel bulan
+                                                    $query = "SELECT id_bulan, bulan FROM bulan";
+
+                                                    // Eksekusi query
+                                                    $stmt = sqlsrv_query($conn, $query);
+
+                                                    if ($stmt === false) {
+                                                        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+                                                    }
+
+                                                    // Periksa apakah ada hasil
+                                                    if (sqlsrv_has_rows($stmt)) {
+                                                        while ($datas2 = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                                            $id_bulan = htmlspecialchars($datas2['id_bulan']); // Pastikan data aman dari XSS
+                                                            $bulan = htmlspecialchars($datas2['bulan']); // Pastikan data aman dari XSS
+                                                            ?>
+                                                            <option value="<?php echo $id_bulan; ?>"><?php echo $bulan; ?></option>
+                                                            <?php
+                                                        }
+                                                    } else {
+                                                        echo "<option value=''>Tidak ada data tersedia</option>";
+                                                    }
+
+                                                    // Bebaskan resource statement
+                                                    sqlsrv_free_stmt($stmt);
+
+                                                    // Tutup koneksi database (opsional, jika tidak dilakukan di config.php)
+                                                    sqlsrv_close($conn);
+                                                    ?>
+                                                </select>
+
                                     
                                         </div>											
 										Status                                       
@@ -266,7 +342,7 @@ function kdauto($tabel, $inisial){
                                         </div>
 										 <div class="form-group">
                                          ID Perangkat
-                                            <input class="form-control" type="text" name="id_perangkat" id="id_perangkat"   >
+                                            <input class="form-control" type="text" name="id_perangkat" id="id_perangkat">
                                     
                                         </div>
 											
@@ -296,7 +372,7 @@ function kdauto($tabel, $inisial){
 										
 										<div class="form-group">
 											Tanggal Perawatan
-                                            <input class="form-control" type="text" name="tgl_perawatan" id="tgl_perawatan" placeholder="hh-mm-yyyy"  >
+                                            <input class="form-control" type="date" name="tgl_perawatan" id="tgl_perawatan" placeholder="hh-mm-yyyy"  >
                                         </div>
 										<div class="form-group">
 											Bulan Perawatan                                       

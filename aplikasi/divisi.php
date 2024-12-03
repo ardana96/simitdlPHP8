@@ -97,16 +97,26 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM divisi");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$kd=$data['kd'];
-				$namadivisi=$data['namadivisi'];
-				?>
+                                       <?php
+                                       
+                                       $query = "SELECT * FROM divisi";
+                                       $stmt = sqlsrv_query($conn, $query);
+                                       
+                                       // Periksa apakah query berhasil
+                                       if ($stmt === false) {
+                                           die(print_r(sqlsrv_errors(), true));
+                                       }
+                                       
+                                       // Periksa apakah ada hasil
+                                       if (sqlsrv_has_rows($stmt)) {
+                                           while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                        $kd=$data['kd'];
+                                        $namadivisi=$data['namadivisi'];
+                                        ?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $kd ?></td>
-                                            <td><? echo $namadivisi ?></td>
+                                            <td><?php echo $kd ?></td>
+                                            <td><?php echo $namadivisi ?></td>
 											 <td class="center">
 											
 											
@@ -123,7 +133,7 @@ function kdauto($tabel, $inisial){
 											</form> </td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
