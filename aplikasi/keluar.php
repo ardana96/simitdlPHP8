@@ -459,7 +459,7 @@ $jum=$data_rinci['jum'];
 			$divisi = $datasss['divisi'];
 		?>
 			<option value="<?php echo $nomor; ?>">
-				<?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . $tgllll->format("Y-m-d") . '/JUMLAH:' . $qty; ?>
+				<?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . '/JUMLAH:' . $qty; ?>
 			</option>
 		<?php } ?>
 	</select>

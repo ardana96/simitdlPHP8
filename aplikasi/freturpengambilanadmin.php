@@ -1,10 +1,6 @@
 <?php
 include('../config.php');
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+
 ?>
 <script language="JavaScript" type="text/javascript" src="suggest.js"></script>
  <script type="text/javascript">
@@ -164,88 +160,204 @@ document.getElementById('noper').value=(noper);
 }}
 
 </script>
-<?
+<?php
 $datee=date('20y-m-d');
  $jam = date("H:i");
 $date=date('ymd');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
 $no_faktur=kdauto("tpengambilan",'');
 
-	if(isset($_POST['nofaktur'])){
-$nofaktur=$_POST['nofaktur'];
-$lihatpengambilan=mysql_query("select * from tpengambilan where nofaktur='$nofaktur'");
-  while($hpengambilan=mysql_fetch_array($lihatpengambilan)){
-	  $no_faktur=$hpengambilan['nofaktur'];
-$tglambil=$hpengambilan['tglambil'];
-$jam=$hpengambilan['jam'];
-$nama=$hpengambilan['nama'];
-$bagian=$hpengambilan['bagian'];
-	$divisi=$hpengambilan['divisi'];
-	
-$sss = mysql_query("SELECT * FROM bagian where id_bagian='$bagian'");
-			 while($datasss = mysql_fetch_array($sss)){
-$id_bagianup=$datasss['id_bagian'];
-$bagianup=$datasss['bagian'];
-	}}
-$kk = mysql_query("SELECT * FROM rincipermintaan where nofaktur='$nofaktur'");
-			 while($datakk = mysql_fetch_array($kk)){
-$noper=$datakk['nomor'];
-	}	
-	
-	$kkk = mysql_query("SELECT * FROM permintaan where nomor='$noper'");
-			 while($datakkk = mysql_fetch_array($kkk)){
-$nmpeminta=$datakkk['nama'];
-	}
-	
-	}
+
+if (isset($_POST['nofaktur'])) {
+    $nofaktur = $_POST['nofaktur'];
+
+    // Query untuk mengambil data dari tabel tpengambilan
+    $query_pengambilan = "SELECT * FROM tpengambilan WHERE nofaktur = ?";
+    $params_pengambilan = array($nofaktur);
+    $lihatpengambilan = sqlsrv_query($conn, $query_pengambilan, $params_pengambilan);
+
+    if ($lihatpengambilan === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    while ($hpengambilan = sqlsrv_fetch_array($lihatpengambilan, SQLSRV_FETCH_ASSOC)) {
+        $no_faktur = $hpengambilan['nofaktur'];
+        $tglambil = $hpengambilan['tglambil'];
+        $jam = $hpengambilan['jam'];
+        $nama = $hpengambilan['nama'];
+        $bagian = $hpengambilan['bagian'];
+        $divisi = $hpengambilan['divisi'];
+
+        // Query untuk mengambil data dari tabel bagian
+        $query_bagian = "SELECT * FROM bagian WHERE id_bagian = ?";
+        $params_bagian = array($bagian);
+        $sss = sqlsrv_query($conn, $query_bagian, $params_bagian);
+
+        if ($sss === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        while ($datasss = sqlsrv_fetch_array($sss, SQLSRV_FETCH_ASSOC)) {
+            $id_bagianup = $datasss['id_bagian'];
+            $bagianup = $datasss['bagian'];
+        }
+    }
+
+    // Query untuk mengambil data dari tabel rincipermintaan
+    $query_rinci = "SELECT * FROM rincipermintaan WHERE nofaktur = ?";
+    $params_rinci = array($nofaktur);
+    $kk = sqlsrv_query($conn, $query_rinci, $params_rinci);
+
+    if ($kk === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    while ($datakk = sqlsrv_fetch_array($kk, SQLSRV_FETCH_ASSOC)) {
+        $noper = $datakk['nomor'];
+    }
+
+    // Query untuk mengambil data dari tabel permintaan
+    $query_permintaan = "SELECT * FROM permintaan WHERE nomor = ?";
+    $params_permintaan = array($noper);
+    $kkk = sqlsrv_query($conn, $query_permintaan, $params_permintaan);
+
+    if ($kkk === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    while ($datakkk = sqlsrv_fetch_array($kkk, SQLSRV_FETCH_ASSOC)) {
+        $nmpeminta = $datakkk['nama'];
+    }
+}
 
 
 
-if(isset($_GET['nama'])){
-$nama=$_GET['nama'];
-$bagianca=$_GET['bagian'];
-$divisi=$_GET['divisi'];
-$no_faktur=$_GET['no_faktur'];
 
-$ss = mysql_query("SELECT * FROM bagian where id_bagian='$bagianca'");
-			 while($datass = mysql_fetch_array($ss)){
-$id_bagianup=$datass['id_bagian'];
-$bagianup=$datass['bagian'];}
-			 }
+if (isset($_GET['nama'])) {
+    $nama = $_GET['nama'];
+    $bagianca = $_GET['bagian'];
+    $divisi = $_GET['divisi'];
+    $no_faktur = $_GET['no_faktur'];
+
+    // Query untuk mengambil data dari tabel bagian
+    $query_bagian = "SELECT * FROM bagian WHERE id_bagian = ?";
+    $params_bagian = array($bagianca);
+    $ss = sqlsrv_query($conn, $query_bagian, $params_bagian);
+
+    if ($ss === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    while ($datass = sqlsrv_fetch_array($ss, SQLSRV_FETCH_ASSOC)) {
+        $id_bagianup = $datass['id_bagian'];
+        $bagianup = $datass['bagian'];
+    }
+}
 ?>
 
 <?php
-$query_rinci_jual="SELECT *,sum(jumlah) as jum FROM trincipengambilan WHERE nofaktur='".$no_faktur."' group by idbarang";
-$get_hitung_rinci=mysql_query($query_rinci_jual);
-$hitung=mysql_num_rows($get_hitung_rinci);
-$total_jual=0; $total_item=0;
-while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
-$jml=$hitung_total['jumlah'];
-$jum=$hitung_total['jum'];
-$sub_total=$hitung_total['sub_total_jual'];
-$total_jual=$sub_total+$total_jual;
-$total_item=$jml+$total_item;}
+// $query_rinci_jual="SELECT *,sum(jumlah) as jum FROM trincipengambilan WHERE nofaktur='".$no_faktur."' group by idbarang";
+// $get_hitung_rinci=mysql_query($query_rinci_jual);
+// $hitung=mysql_num_rows($get_hitung_rinci);
+// $total_jual=0; $total_item=0;
+// while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
+// $jml=$hitung_total['jumlah'];
+// $jum=$hitung_total['jum'];
+// $sub_total=$hitung_total['sub_total_jual'];
+// $total_jual=$sub_total+$total_jual;
+// $total_item=$jml+$total_item;}
+
+$query_rinci_jual = "SELECT idbarang, SUM(jumlah) AS jum, SUM(sub_total_jual) AS total_jual 
+                     FROM trincipengambilan 
+                     WHERE nofaktur = ? 
+                     GROUP BY idbarang";
+
+$params_rinci_jual = array($no_faktur); // Parameterized query to prevent SQL injection
+
+// Eksekusi query
+$get_hitung_rinci = sqlsrv_query($conn, $query_rinci_jual, $params_rinci_jual);
+
+// Cek jika query berhasil dijalankan
+if ($get_hitung_rinci === false) {
+    die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+}
+
+$total_jual = 0;
+$total_item = 0;
+
+// Mengambil hasil query
+while ($hitung_total = sqlsrv_fetch_array($get_hitung_rinci, SQLSRV_FETCH_ASSOC)) {
+    $jml = $hitung_total['jum'];  // Jumlah total barang
+    $sub_total = $hitung_total['total_jual'];  // Subtotal per item
+    $total_jual += $sub_total;  // Total keseluruhan untuk penjualan
+    $total_item += $jml;  // Total jumlah item
+}
+
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -388,11 +500,15 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 										
                                         </tr>
 										  <?php
-$rinci_jual=mysql_query($query_rinci_jual);
-$angka=2;
-$angka2=2;
-$angka3=2;
-while( $data_rinci=mysql_fetch_array($rinci_jual)){
+$rinci_jual_query = "SELECT * FROM trincipengambilan WHERE nofaktur = ?";
+$params_rinci_jual = array($no_faktur);
+// Menjalankan query menggunakan sqlsrv_query
+$rinci_jual = sqlsrv_query($conn, $rinci_jual_query, $params_rinci_jual);
+$angka = 2;
+$angka2 = 2;
+$angka3 = 2;
+// Mengambil hasil query
+while ($data_rinci = sqlsrv_fetch_array($rinci_jual, SQLSRV_FETCH_ASSOC)) {
 $idbarang=$data_rinci['idbarang'];
 $namabarang=$data_rinci['namabarang'];
 $jumlah=$data_rinci['jumlah'];
@@ -467,7 +583,7 @@ $jum=$data_rinci['jum'];
     Bagian                                      
         <select class="form-control" name='bagian' required='required' onchange="new permintaan2(this.value)">
              <option selected="selected"  value="<?php echo $id_bagianup; ?>"><?php echo $bagianup; ?></option>
-			<?	$s = mysql_query("SELECT * FROM bagian order by bagian asc");
+			<?php	$s = mysql_query("SELECT * FROM bagian order by bagian asc");
 				if(mysql_num_rows($s) > 0){
 			 while($datas = mysql_fetch_array($s)){
 				$idbagian=$datas['id_bagian'];
@@ -475,7 +591,7 @@ $jum=$data_rinci['jum'];
 			 <option value="<? echo $idbagian; ?>"> <? echo $bagian; ?>
 			 </option>
 			 
-			 <?}}?>
+			 <?php}}?>
 			
     
         </select>
@@ -496,7 +612,7 @@ $jum=$data_rinci['jum'];
         <select class="form-control" name='nomor' >
              <option selected="selected" ></option>
 			
-			<?	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' and aktif<>'nonaktif' order by nama");
+			<?php	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' and aktif<>'nonaktif' order by nama");
 				if(mysql_num_rows($sss) > 0){
 			 while($datasss = mysql_fetch_array($sss)){
 				$nomor=$datasss['nomor'];
@@ -514,12 +630,12 @@ $jum=$data_rinci['jum'];
 			 <option value="<? echo $nomor; ?>" ><? echo $nama.'/'.$bagian.'/'.$divisi.'/'.$namabarang.'/'.$keterangan.'/'.$tglllll.'/JUM:'.$qty.'/SISA:'.$sisa ; ?>
 			 </option>
 			 
-			 <?}}?>
+			 <?php }}?>
 			
     
         </select>
 <br>
-     <?	$sss = mysql_query("SELECT * FROM trincipengambilan where nofaktur='$no_faktur'");
+     <?php	$sss = mysql_query("SELECT * FROM trincipengambilan where nofaktur='$no_faktur'");
 				if(mysql_num_rows($sss) > 0){?>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
@@ -527,7 +643,7 @@ $jum=$data_rinci['jum'];
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 
  <button name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
-				<?}?>
+				<?php}?>
 	  </form>
     </div>	
 </body>

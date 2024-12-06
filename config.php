@@ -16,10 +16,15 @@
 
 <?php
 // Konfigurasi koneksi
-$server_database = "Gama-Laptop"; // Atau gunakan alamat server Anda
-$database_name = "sitdl";
-$username = ""; // Ganti dengan username SQL Server Anda
-$password = ""; // Ganti dengan password SQL Server Anda
+$server_database = "com-simit-sqlserver-prd.database.windows.net"; // Atau gunakan alamat server Anda
+$database_name = "com-simit-db-prd";
+$username = "simitlogin"; // Ganti dengan username SQL Server Anda
+$password = "simit321."; // Ganti dengan password SQL Server Anda
+
+// $server_database = "Gama-Laptop"; // Atau gunakan alamat server Anda
+// $database_name = "sitdl";
+// $username = ""; // Ganti dengan username SQL Server Anda
+// $password = ""; 
 
 // Parameter koneksi
 $connection_options = array(
