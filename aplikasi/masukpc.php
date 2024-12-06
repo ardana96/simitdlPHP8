@@ -121,28 +121,72 @@ var evt = (evt) ? evt : ((event) ? event : null);
 document.onkeypress = dontEnter;
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
     <div class="inner">
 		    <div class="row">
@@ -156,7 +200,7 @@ function kdauto($tabel, $inisial){
                <div class="panel panel-danger">
 			   <?php if(isset($_GET['stt'])){
 $stt=$_GET['stt'];
-echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "><?}
+echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "><?php }
 ?> 
                         <div class="panel-heading">
                    
@@ -165,7 +209,7 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 						
                             <form action="aplikasi/simpanmasukpc.php" method="post"  enctype="multipart/form-data" name="postform2">
    										  <div class="form-group">                                          
-                                            <input class="form-control" type="hidden" name="nofaktur" value="<? echo kdauto("tpembelian",""); ?>" readonly  >
+                                            <input class="form-control" type="hidden" name="nofaktur" value="<?php echo kdauto("tpembelian",""); ?>" readonly  >
                                     
                                         </div>
 										 <div class="form-group">
@@ -191,22 +235,28 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 				 
 	   <div class="form-group">
  <b> Nama Supplier </b>        
-      <select class="form-control" name='idsupp' required='required'>	 
-	  <option> </option>
-            
-			<?	$ss = mysql_query("SELECT * FROM tsupplier  ");
-				if(mysql_num_rows($ss) > 0){
-			 while($datass = mysql_fetch_array($ss)){
-				$idsupp=$datass['idsupp'];
-				$namasupp=$datass['namasupp'];
-				?>
-			 <option value="<? echo $idsupp; ?>"> <? echo $namasupp; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	<select class="form-control" name="idsupp" required="required">
+		<option></option>
+		<?php
+		// Query untuk mendapatkan data dari tabel tsupplier
+		$query = "SELECT * FROM tsupplier";
+		// Eksekusi query
+		$ss = sqlsrv_query($conn, $query);
+
+		// Cek apakah query berhasil dijalankan
+		if ($ss === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		// Looping untuk menampilkan data di dalam dropdown
+		while ($datass = sqlsrv_fetch_array($ss, SQLSRV_FETCH_ASSOC)) {
+			$idsupp = $datass['idsupp'];
+			$namasupp = $datass['namasupp'];
+			?>
+			<option value="<?php echo $idsupp; ?>"><?php echo $namasupp; ?></option>
+		<?php } ?>
+	</select>
+
                                         
                                     
                                         </div>	
@@ -224,25 +274,42 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
         <select class="form-control" name='noper' style='display:none;'>
            <option selected="selected" value='' >.:: Pilih Permintaan Terdaftar ::.</option>
 			
-			<?	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' and aktif<>'nonaktif' order by nama ");
-				if(mysql_num_rows($sss) > 0){
-			 while($datasss = mysql_fetch_array($sss)){
-				$nomor=$datasss['nomor'];
-				$keterangan=$datasss['keterangan'];
-				$tgllll=$datasss['tgl'];
-				$t=substr($tgllll,0,4);
-				$b=substr($tgllll,-5,2);
-				$h=substr($tgllll,-2,2);
-				$tglllll=$h.'-'.$b.'-'.$t;
-				$bagian=$datasss['bagian'];
-				$nama=$datasss['nama'];
-				$qty=$datasss['qty'];$sisa=$datasss['sisa'];
-				$namabarang=$datasss['namabarang'];
-				$divisi=$datasss['divisi'];?>
-			 <option value="<? echo $nomor; ?>" ><? echo $nama.'/'.$bagian.'/'.$divisi.'/'.$namabarang.'/'.$keterangan.'/'.$tglllll.'/JUMLAH:'.$qty ; ?>
-			 </option>
+			 <?php
+            // Query untuk mengambil data dari tabel permintaan
+            $query = "SELECT * FROM permintaan WHERE status <> 'selesai' AND aktif <> 'nonaktif' ORDER BY nama";
+            
+            // Menjalankan query menggunakan SQL Server
+            $sss = sqlsrv_query($conn, $query);
+            
+            // Mengecek apakah query berhasil dijalankan
+            if ($sss === false) {
+                die(print_r(sqlsrv_errors(), true));
+            }
+
+            // Mengambil hasil query dan menampilkan data
+            while ($datasss = sqlsrv_fetch_array($sss, SQLSRV_FETCH_ASSOC)) {
+                $nomor = $datasss['nomor'];
+                $keterangan = $datasss['keterangan'];
+                $tgllll = $datasss['tgl'];
+                
+                // Memformat tanggal (menggunakan substring untuk memisah bagian tahun, bulan, hari)
+                // $t = substr($tgllll, 0, 4);
+                // $b = substr($tgllll, -5, 2);
+                // $h = substr($tgllll, -2, 2);
+                // $tglllll = $h . '-' . $b . '-' . $t;
+                
+                $bagian = $datasss['bagian'];
+                $nama = $datasss['nama'];
+                $qty = $datasss['qty'];
+                $sisa = $datasss['sisa'];
+                $namabarang = $datasss['namabarang'];
+                $divisi = $datasss['divisi'];
+            ?>
+                <option value="<?php echo $nomor; ?>">
+                    <?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . $tgllll->format("Y-m-d") . '/JUMLAH:' . $qty; ?>
+                </option>
+            <?php } ?>
 			 
-			 <?}}?>
 			
     
         </select>	
@@ -251,12 +318,12 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 		
    <div class="form-group">
    <b>Nama Komputer</b>                                              
-                                            <input class="form-control" type="text" name="idpc" value="<? echo kdauto("tpc","PC"); ?>" readonly  >
+                                            <input class="form-control" type="text" name="idpc" value="<?php echo kdauto("tpc","PC"); ?>" readonly  >
                                     
                                         </div>
 										   <div class="form-group">
                                           
-                                            <input class="form-control" type="hidden" name="nofaktur" value="<? echo kdauto("tpembelian",""); ?>" readonly  >
+                                            <input class="form-control" type="hidden" name="nofaktur" value="<?php echo kdauto("tpembelian",""); ?>" readonly  >
                                     
                                         </div>
 	<div class="form-group" >
@@ -269,226 +336,309 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 										
 	
 
-										   <div class="form-group" >
- <b>Motherboard </b><font color=red>Tidak Mengurangi Stock Hanya Pemberian Nama</font>         
-      <select class="form-control" name='mobo' style='display:none;' >	 <option> </option>
-            
-			<?	$s1 = mysql_query("SELECT * FROM tbarang where idkategori='00001'  ");
-				if(mysql_num_rows($s1) > 0){
-			 while($datas1 = mysql_fetch_array($s1)){
-				$idbarang=$datas1['idbarang'];
-				$namabarang=$datas1['namabarang'];
-				$stock=$datas1['stock'];?>
-			 <option value="<? echo $namabarang; ?>"> <? echo $namabarang; ?>
-			 </option>
-			 
-			 <?}}?>
+	<div class="form-group" >
+		<b>Motherboard </b><font color=red>Tidak Mengurangi Stock Hanya Pemberian Nama</font>         
+      	
+		<select class="form-control" name='mobo' style='display:none;'>
+			<option></option>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00001'";
 			
-    
-        </select> 
-     <input  class="form-control" type="text"  id="moboo" name="moboo" style='display:none;' > 
-                                        </div>
+			// Eksekusi query menggunakan SQL Server
+			$s1 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s1 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Menampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas1 = sqlsrv_fetch_array($s1, SQLSRV_FETCH_ASSOC)) {
+				$idbarang = $datas1['idbarang'];
+				$namabarang = $datas1['namabarang'];
+				$stock = $datas1['stock'];
+			?>
+				<option value="<?php echo $namabarang; ?>"> <?php echo $namabarang; ?> </option>
+			<?php } ?>
+		</select>
+     	<input  class="form-control" type="text"  id="moboo" name="moboo" style='display:none;' > 
+    </div>
 		
 
-										   <div class="form-group">
- <b>Prosesor</b><font color=red>  Tidak Mengurangi Stock Hanya Pembelian Nama</font>           
-      <select class="form-control" name='prosesor' style='display:none;'><option> </option>
-            
-			<?	$s2 = mysql_query("SELECT * FROM tbarang where idkategori='00002' ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$idbarang2=$datas2['idbarang'];
-				$namabarang2=$datas2['namabarang'];?>
-			 <option value="<? echo $namabarang2; ?>"> <? echo $namabarang2; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-                   <input  class="form-control" type="text"  id="prosesorr" name="prosesorr" style='display:none;' >      
-                                    
-                                        </div>
+	<div class="form-group">
+		<b>Prosesor</b><font color=red>  Tidak Mengurangi Stock Hanya Pembelian Nama</font>           
+		<select class="form-control" name='prosesor' style='display:none;'>
+			<option></option>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00002'";
+
+			// Eksekusi query menggunakan SQL Server
+			$s2 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s2 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas2 = sqlsrv_fetch_array($s2, SQLSRV_FETCH_ASSOC)) {
+				$idbarang2 = $datas2['idbarang'];
+				$namabarang2 = $datas2['namabarang'];
+			?>
+				<option value="<?php echo $namabarang2; ?>"> <?php echo $namabarang2; ?> </option>
+			<?php } ?>
+		</select>
+
+		<input  class="form-control" type="text"  id="prosesorr" name="prosesorr" style='display:none;' >      
+								
+	</div>
 
     
-										   <div class="form-group">
- <b>Power Supply</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
-      <select class="form-control" name='ps' style='display:none;'>
-	  <option value="<? echo $powersuply; ?>"><? echo $powersuply; ?> </option>
-            
-			<?	$s3 = mysql_query("SELECT * FROM tbarang where idkategori='00003' ");
-				if(mysql_num_rows($s3) > 0){
-			 while($datas3 = mysql_fetch_array($s3)){
-				$idbarang3=$datas3['idbarang'];
-				$namabarang3=$datas3['namabarang'];?>
-			 <option value="<? echo $namabarang3; ?>"> <? echo $namabarang3; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-             <input  class="form-control" type="text"  id="pss" name="pss" style='display:none;' >                            
-                                    
-                                        </div>
+	<div class="form-group">
+ 		<b>Power Supply</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
+		<select class="form-control" name='ps' style='display:none;'>
+			<option></option>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00003'";
 
-										   <div class="form-group">
- <b>Casing</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
-      <select class="form-control" name='casing'  style='display:none;'>
-	  <option value="<? echo $cassing; ?>"><? echo $cassing; ?> </option>
-            
-			<?	$s4 = mysql_query("SELECT * FROM tbarang where idkategori='00004'  ");
-				if(mysql_num_rows($s4) > 0){
-			 while($datas4 = mysql_fetch_array($s4)){
-				$idbarang4=$datas4['idbarang'];
-				$namabarang4=$datas4['namabarang'];?>
-			 <option value="<? echo $namabarang4; ?>"> <? echo $namabarang4; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+			// Eksekusi query menggunakan SQL Server
+			$s3 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s3 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas3 = sqlsrv_fetch_array($s3, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $namabarang3; ?>"> <?php echo $namabarang3; ?> </option>
+			<?php } ?>
+		</select>
+
+        <input  class="form-control" type="text"  id="pss" name="pss" style='display:none;' >                            
+                                    
+    </div>
+
+	<div class="form-group">
+ 		<b>Casing</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
+		<select class="form-control" name='casing' style='display:none;'>
+			<option></option>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00004'";
+
+			// Eksekusi query menggunakan SQL Server
+			$s4 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s4 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas4 = sqlsrv_fetch_array($s4, SQLSRV_FETCH_ASSOC)) {
+				$idbarang4 = $datas4['idbarang'];
+				$namabarang4 = $datas4['namabarang'];
+			?>
+				<option value="<?php echo $namabarang4; ?>"> <?php echo $namabarang4; ?> </option>
+			<?php } ?>
+		</select>
+
     <input  class="form-control" type="text"  id="casingg" name="casingg" style='display:none;' >                     
                                     
-                                        </div>
+    </div>
 
-										   <div class="form-group">
- <b>Harddisk Slot 1</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
-      <select class="form-control" name='hd1'  style='display:none;'>
-	  <option value="<? echo $hd1; ?>"><? echo $hd1; ?> </option>
-            
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' ");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $namabarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-                                        
-     <input  class="form-control" type="text"  id="hd11" name="hd11" style='display:none;' >                                
-                                        </div>
+	<div class="form-group">
+ 		<b>Harddisk Slot 1</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
+		<select class="form-control" name='hd1' style='display:none;'>
+			<option></option>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00005'";
+
+			// Eksekusi query menggunakan SQL Server
+			$s5 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s5 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas5 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang5 = $datas5['idbarang'];
+				$namabarang5 = $datas5['namabarang'];
+			?>
+				<option value="<?php echo $namabarang5; ?>"> <?php echo $namabarang5; ?> </option>
+			<?php } ?>
+		</select>
+                           
+     	<input  class="form-control" type="text"  id="hd11" name="hd11" style='display:none;' >                                
+    </div>
 
   
-					  <div class="form-group">
- <b>Harddisk Slot 2</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
-     <select class="form-control" name='hd2'  style='display:none;'>
-	  <option value="<? echo $hd2; ?>" ><? echo $hd2; ?> </option>
-            
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' ");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $namabarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-     <input  class="form-control" type="text"  id="hd22" name="hd22" style='display:none;' >                                    
-                                    
-                                        </div>	
+	<div class="form-group">
+ 		<b>Harddisk Slot 2</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
+		<select class="form-control" name='hd2'  style='display:none;'>
+			<option></option>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00005'";
 
-										<div class="form-group">
- <b>RAM Slot 1</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
-      <select class="form-control" name='ram1' style='display:none;'>
-	  <option value="<? echo $ram1; ?>"> <? echo $ram1; ?></option>
-            
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+			// Eksekusi query menggunakan SQL Server
+			$s5 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s5 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas5 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang5 = $datas5['idbarang'];
+				$namabarang5 = $datas5['namabarang'];
+			?>
+				<option value="<?php echo $namabarang5; ?>"> <?php echo $namabarang5; ?> </option>
+			<?php } ?>
+		</select>
+     	<input  class="form-control" type="text"  id="hd22" name="hd22" style='display:none;' >                                    
+                                    
+    </div>	
+
+	<div class="form-group">
+ 		<b>RAM Slot 1</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
+		<select class="form-control" name='ram1' style='display:none;'>
+		 	<option></option>
+
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00006'";
+
+			// Eksekusi query menggunakan SQL Server
+			$s6 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s6 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas6 = sqlsrv_fetch_array($s6, SQLSRV_FETCH_ASSOC)) {
+				$idbarang6 = $datas6['idbarang'];
+				$namabarang6 = $datas6['namabarang'];
+			?>
+				<option value="<?php echo $namabarang6; ?>"> <?php echo $namabarang6; ?> </option>
+			<?php } ?>
+		</select>
                                         
-   <input  class="form-control" type="text"  id="ram11" name="ram11" style='display:none;' >                                  
-                                        </div>
+   		<input  class="form-control" type="text"  id="ram11" name="ram11" style='display:none;' >                                  
+    </div>
 
-										  <div class="form-group">
- <b>RAM Slot 2</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
-      <select class="form-control" name='ram2' style='display:none;'>
-	  <option value="<? echo $ram2; ?>" ><? echo $ram2; ?> </option>
-            
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-   <input  class="form-control" type="text"  id="ram22" name="ram22" style='display:none;' >                                      
-                                    
-                                        </div>
+	<div class="form-group">
+ 		<b>RAM Slot 2</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
+      	<select class="form-control" name='ram2' style='display:none;'>
+	  		<option></option>
 
-											<div class="form-group">
- <b>Fan Prosesor</b> <font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>         
-      <select class="form-control" name='fan' style='display:none;'>
-	  <option value="<? echo $dvd; ?>" ><? echo $dvd; ?> </option>
-            
-			<?	$s12 = mysql_query("SELECT * FROM tbarang where idkategori='00007' ");
-				if(mysql_num_rows($s12) > 0){
-			 while($datas12 = mysql_fetch_array($s12)){
-				$idbarang12=$datas12['idbarang'];
-				$namabarang12=$datas12['namabarang'];?>
-			 <option value="<? echo $namabarang12; ?>"> <? echo $namabarang12; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-    <input  class="form-control" type="text"  id="fann" name="fann" style='display:none;' >                                     
-                                    
-                                        </div>
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00006'";
 
-										<div class="form-group">
- <b>DVD Internal</b> <font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>         
-      <select class="form-control" name='dvd' style='display:none;'>
-	  <option value="<? echo $dvd; ?>" ><? echo $dvd; ?> </option>
-            
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00008' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
-   <input  class="form-control" type="text"  id="dvdd" name="dvdd" style='display:none;' >                                      
+			// Eksekusi query menggunakan SQL Server
+			$s6 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s6 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas6 = sqlsrv_fetch_array($s6, SQLSRV_FETCH_ASSOC)) {
+				$idbarang6 = $datas6['idbarang'];
+				$namabarang6 = $datas6['namabarang'];
+			?>
+				<option value="<?php echo $namabarang6; ?>"> <?php echo $namabarang6; ?> </option>
+			<?php } ?>
+		</select>
+   		<input  class="form-control" type="text"  id="ram22" name="ram22" style='display:none;' >                              
+    </div>
+
+	<div class="form-group">
+ 		<b>Fan Prosesor</b> <font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>         
+		<select class="form-control" name='fan' style='display:none;'>
+			<option></option>
+
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00007'";
+
+			// Eksekusi query menggunakan SQL Server
+			$s12 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s12 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas12 = sqlsrv_fetch_array($s12, SQLSRV_FETCH_ASSOC)) {
+				$idbarang12 = $datas12['idbarang'];
+				$namabarang12 = $datas12['namabarang'];
+			?>
+				<option value="<?php echo $namabarang12; ?>"> <?php echo $namabarang12; ?> </option>
+			<?php } ?>
+		</select>
+
+    	<input  class="form-control" type="text"  id="fann" name="fann" style='display:none;' >                                     
                                     
-                                        </div>
-	 <b>Keterangan</b> 
- <textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px" placeholder=""></textarea>                                    
-  <br>                  
+    </div>
+
+	<div class="form-group">
+ 		<b>DVD Internal</b> <font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>         
+		<select class="form-control" name='dvd' style='display:none;'>
+			<option></option>
+
+			<?php
+			// Query untuk mengambil data dari tabel tbarang dengan kategori tertentu
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00008'";
+
+			// Eksekusi query menggunakan SQL Server
+			$s6 = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($s6 === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Loop untuk mengambil data dan menampilkan opsi dropdown
+			while ($datas6 = sqlsrv_fetch_array($s6, SQLSRV_FETCH_ASSOC)) {
+				$idbarang6 = $datas6['idbarang'];
+				$namabarang6 = $datas6['namabarang'];
+			?>
+				<option value="<?php echo $namabarang6; ?>"> <?php echo $namabarang6; ?> </option>
+			<?php } ?>
+		</select>
+
+   		<input  class="form-control" type="text"  id="dvdd" name="dvdd" style='display:none;' >                                      
+                                    
+    </div>
+	<div class="form-group">
+		<b>Keterangan</b> 
+			<textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px" placeholder=""></textarea>                                    
+		<br>       
+	</div>           
 	
 
 
 
 									
-                                    <button  name="tombol" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
-            <button  name="button_tambah" class="btn text-muted text-center btn-primary" type="reset">Reset</button>
+     <button  name="tombol" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
+    <button  name="button_tambah" class="btn text-muted text-center btn-primary" type="reset">Reset</button>
 			 </td>
 
                                     </form>

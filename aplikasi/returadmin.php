@@ -38,28 +38,39 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <? $date=date('20y-m');
-									   $datee=$date.'%';
-									   $sql = mysql_query("SELECT * from tpengambilan,bagian where tpengambilan.bagian=bagian.id_bagian ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$nofaktur=$data['nofaktur'];
-				$tglambil=$data['tglambil'];
-				$jam=$data['jam'];
-				$nama=$data['nama'];
-				$bagian=$data['bagian'];
-				$divisi=$data['divisi'];
+                <?php
+                    $date=date('20y-m');
+                    $datee=$date.'%';
+                    $query = "SELECT * FROM tpengambilan 
+                                INNER JOIN bagian ON tpengambilan.bagian = bagian.id_bagian";
+          
+                    // Eksekusi query
+                    $sql = sqlsrv_query($conn, $query);
+                    
+                    // Periksa apakah query berhasil
+                    if ($sql === false) {
+                        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+                    }
+                    
+                    // Loop untuk mengambil dan memproses data
+                    while ($data = sqlsrv_fetch_array($sql, SQLSRV_FETCH_ASSOC)) {
+                        $nofaktur = $data['nofaktur'];
+                        $tglambil = $data['tglambil'];
+                        $jam = $data['jam'];
+                        $nama = $data['nama'];
+                        $bagian = $data['bagian'];
+                        $divisi = $data['divisi'];
 		
 			
 				?>
 				
                                         <tr class="gradeC">
-												<td><? echo $nofaktur ?></td>
-										<td><? echo $tglambil ?></td>
-                                            <td><? echo $jam ?></td>
-                                            <td><? echo $nama?></td>
-											<td><? echo $bagian ?></td>
-											<td><? echo $divisi ?></td>
+												<td><?php echo $nofaktur ?></td>
+										<td><?php echo $tglambil->format('d F Y') ?></td>
+                                            <td><?php echo $jam ?></td>
+                                            <td><?php echo $nama?></td>
+											<td><?php echo $bagian ?></td>
+											<td><?php echo $divisi ?></td>
 										
                              
 										
@@ -73,7 +84,7 @@
 											</td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }?>                      
                                     </tbody>
                                 </table>
                             </div>

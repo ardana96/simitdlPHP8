@@ -1,32 +1,72 @@
 <?php
-include('../config.php');
-if(isset($_POST['tombol'])){
-$nomor=$_POST['nomor'];
-$id_perangkat=$_POST['id_perangkat'];
-$perangkat=$_POST['perangkat'];
-$keterangan=$_POST['keterangan'];
-$divisi=$_POST['divisi'];
-$user = $_POST['user'];
-$lokasi = $_POST['lokasi'];
-$tgl_perawatan = $_POST['tgl_perawatan'];
-$bulan = $_POST['bulan'];
+include('../config.php'); // Pastikan koneksi sudah benar menggunakan SQL Server
 
-$tipe = $_POST['tipe'];
-$brand = $_POST['brand'];
-$model = $_POST['model'];
-$pembelian_dari = $_POST['pembelian_dari'];
-$sn = $_POST['sn'];
+if (isset($_POST['tombol'])) {
+    // Ambil data dari form
+    $nomor = $_POST['nomor'];
+    $id_perangkat = $_POST['id_perangkat'];
+    $perangkat = $_POST['perangkat'];
+    $keterangan = $_POST['keterangan'];
+    $divisi = $_POST['divisi'];
+    $user = $_POST['user'];
+    $lokasi = $_POST['lokasi'];
+    $tgl_perawatan = $_POST['tgl_perawatan'];
+    $bulan = $_POST['bulan'];
+    $tipe = $_POST['tipe'];
+    $brand = $_POST['brand'];
+    $model = $_POST['model'];
+    $pembelian_dari = $_POST['pembelian_dari'];
+    $sn = $_POST['sn'];
 
-$query_update="UPDATE peripheral SET id_perangkat= '".$id_perangkat."',perangkat= '".$perangkat."',
-keterangan= '".$keterangan."',divisi= '".$divisi."',user= '".$user."', 
-lokasi= '".$lokasi."',tgl_perawatan= '".$tgl_perawatan."',bulan= '".$bulan."',
-tipe='".$tipe."', brand ='".$brand."', model ='".$model."', pembelian_dari='".$pembelian_dari."',
-sn='".$sn."'
+    // Query update dengan parameterized query
+    $query_update = "UPDATE peripheral SET 
+                    id_perangkat = ?, 
+                    perangkat = ?, 
+                    keterangan = ?, 
+                    divisi = ?, 
+                    [user] = ?, 
+                    lokasi = ?, 
+                    tgl_perawatan = ?, 
+                    bulan = ?, 
+                    tipe = ?, 
+                    brand = ?, 
+                    model = ?, 
+                    pembelian_dari = ?, 
+                    sn = ? 
+                    WHERE nomor = ?";
 
-WHERE nomor='".$nomor."'";	
-$update=mysql_query($query_update);
-if($update){
-header("location:../user.php?menu=peripheral&stt= Update Berhasil");}
-else{
-header("location:../user.php?menu=peripheral&stt=gagal");}}
+    // Parameter untuk bind ke query
+    $params = array(
+        $id_perangkat, 
+        $perangkat, 
+        $keterangan, 
+        $divisi, 
+        $user, 
+        $lokasi, 
+        $tgl_perawatan, 
+        $bulan, 
+        $tipe, 
+        $brand, 
+        $model, 
+        $pembelian_dari, 
+        $sn, 
+        $nomor
+    );
+
+    // Eksekusi query menggunakan sqlsrv_query
+    $stmt = sqlsrv_query($conn, $query_update, $params);
+
+    // Periksa apakah query berhasil dijalankan
+    if ($stmt === false) {
+        // Jika gagal, tangkap error
+        $errors = sqlsrv_errors();
+        header("Location: ../user.php?menu=peripheral&stt=Gagal update data. Error: " . print_r($errors, true));
+    } else {
+        // Jika berhasil, redirect ke halaman dengan pesan sukses
+        header("Location: ../user.php?menu=peripheral&stt=Update Berhasil");
+    }
+
+    // Bebaskan resource statement
+    sqlsrv_free_stmt($stmt);
+}
 ?>

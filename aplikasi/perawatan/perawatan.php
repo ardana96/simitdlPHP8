@@ -118,17 +118,22 @@
                     items: items
                 },
                
-              
+                
                 success: function(response) {
-                    if (response === 'success') {
+                    
+                    //if (response === 'success') {
                         alert('Perubahan berhasil disimpan!');
                         $('#newRegg').modal('hide');
                         refresh();
+                        console.log(response);
                         // Lakukan tindakan tambahan jika diperlukan, seperti refresh data
-                    } else {
-                        alert('Gagal menyimpan perubahan. Silakan coba lagi.');
-                    }
+                   // } else {
+                        //console.log(response);
+                        //alert('Gagal menyimpan perubahan. Silakan coba lagi.');
+                    //}
                 },
+                
+        
                 error: function() {
                     alert('Terjadi kesalahan saat menyimpan data.');
                 }
@@ -219,11 +224,24 @@ mywin=window.open("manager/lap_jumkat.php?idkategori=" + idkategori ,"_blank",	"
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM tipe_perawatan");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$id=$data['id'];
-				$nama_perangkat=$data['nama_perangkat'];
+                                       <?php
+                                      
+
+                    $query = "SELECT * FROM tipe_perawatan";
+                    $stmt = sqlsrv_query($conn, $query);
+                    
+                    // Periksa apakah query berhasil
+                    if ($stmt === false) {
+                        die(print_r(sqlsrv_errors(), true));
+                    }
+                    
+                    // Periksa apakah ada hasil
+                    if (sqlsrv_has_rows($stmt)) {
+                        while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                        $id=$data['id'];
+                        $nama_perangkat=$data['nama_perangkat'];
+
+
 		
 		
 				
@@ -231,7 +249,7 @@ mywin=window.open("manager/lap_jumkat.php?idkategori=" + idkategori ,"_blank",	"
 				?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $nama_perangkat ?></td>
+                                            <td><?php echo $nama_perangkat ?></td>
 												
                                            <td class="center">
 											
@@ -250,7 +268,7 @@ mywin=window.open("manager/lap_jumkat.php?idkategori=" + idkategori ,"_blank",	"
 											</form> </td>
                                             
                                         </tr>
-		<?}}?>                      
+		<?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>

@@ -1,14 +1,5 @@
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('config.php');  // Pastikan koneksi menggunakan sqlsrv
 $tahunsek=date('20y');
 ?>
 <script language="JavaScript" type="text/javascript" src="suggest.js"></script>
@@ -46,45 +37,105 @@ document.getElementById('www').value = string[0];
 
 
 </script>
-<?
+<?php
 $datee=date('20y-m-d');
  $jam = date("H:i");
 $date=date('d-m-20y');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
+
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
 $no_faktur=kdauto("tpembelian",'');
 ?>
 
 <?php
-$query_rinci_jual="SELECT *,sum(jumlah) as jum FROM trincipembelian WHERE nofaktur='".$no_faktur."' group by idbarang";
-$get_hitung_rinci=mysql_query($query_rinci_jual);
-$hitung=mysql_num_rows($get_hitung_rinci);
-$total_jual=0; $total_item=0;
-while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
-$jml=$hitung_total['jumlah'];
-$sub_total=$hitung_total['sub_total_jual'];
-$total_jual=$sub_total+$total_jual;
-$total_item=$jml+$total_item;}
+$query_rinci_jual = "SELECT   MAX(idbarang) as idbarang, Max(namabarang) as namabarang, Max(jumlah) as jumlah , SUM(jumlah) AS jum FROM trincipembelian WHERE nofaktur = ? GROUP BY idbarang";
+
+// Menyiapkan parameter untuk query
+$params = array($no_faktur);
+
+// Menjalankan query
+$get_hitung_rinci = sqlsrv_query($conn, $query_rinci_jual, $params);
+
+// Cek apakah query berhasil
+if ($get_hitung_rinci === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+$total_jual = 0;
+$total_item = 0;
+$hitung = 0; // Initialize hitung
+
+// Loop untuk mengambil hasil query
+while ($hitung_total = sqlsrv_fetch_array($get_hitung_rinci, SQLSRV_FETCH_ASSOC)) {
+    $jml = $hitung_total['jum'];
+   
+    $total_item = $jml + $total_item;
+    $hitung++; // Increment hitung
+}
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -181,7 +232,7 @@ document.location.href="aplikasi/simpanrincipemasukan.php?kd_barang="+kd_barang+
 <div  id="layer1" onclick="new sendRequest(this.value)"  class="isi_tabelll" ></div></div></td>
   <td ><label>
         <input type="text" name="idbarang" id="www" readonly />
-		<input  class="form-contro" type="hidden"  id="asfa" name="kategori" readonly >
+		<input  class="form-control" type="hidden"  id="asfa" name="kategori" readonly >
       </label>
  </td>
  <td><input  class="form-contro" type="text"  name="jumlah"  ></td>
@@ -221,8 +272,8 @@ document.location.href="aplikasi/simpanrincipemasukan.php?kd_barang="+kd_barang+
 										
                                         </tr>
 										  <?php
-$rinci_jual=mysql_query($query_rinci_jual);
-while( $data_rinci=mysql_fetch_array($rinci_jual)){
+$rinci_jual=sqlsrv_query($conn, $query_rinci_jual, $params);
+while( $data_rinci = sqlsrv_fetch_array($rinci_jual, SQLSRV_FETCH_ASSOC)){
 $idbarang=$data_rinci['idbarang'];
 $namabarang=$data_rinci['namabarang'];
 $jumlah=$data_rinci['jumlah'];
@@ -258,12 +309,12 @@ $jum=$data_rinci['jum'];
 </div>
 
 <div id="info_transaksi">
-  <button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
+  <!-- <button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
                                 Tambah Barang 
                             </button>
 							 <button class="btn btn-primary" data-toggle="modal"  data-target="#newReggg">
                                 Tambah Supplier 
-                            </button>
+                            </button> -->
 <!--							
   <div id="scanner">Barcode: 
       <input  type="text" name="kd_barang" id="kd_barang" onkeypress="onEnter(event)" />
@@ -281,7 +332,7 @@ $jum=$data_rinci['jum'];
 		
 		
                               Tanggal
-                                            <input  class="form-control" value="<?php echo $date; ?>" type="text" name="tglbeli" >
+                                            <input  class="form-control" value="<?php echo date('Y-m-d'); ?>" type="date" name="tglbeli" >
 	
 		
                                             
@@ -293,46 +344,68 @@ $jum=$data_rinci['jum'];
                                        
     Nama Supplier                                    
         <select class="form-control" name='idsupp' required='required'>
-             <option selected="selected" ></option>
-			<?	$s = mysql_query("SELECT * FROM tsupplier ");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$idsupp=$datas['idsupp'];
-				$namasupp=$datas['namasupp'];?>
-			 <option value="<? echo $idsupp; ?>"> <? echo $namasupp; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
+                        <option selected="selected"></option>
+                        <?php
+                        // Menggunakan koneksi SQL Server
+                        $query = "SELECT * FROM tsupplier";
+                        // Menjalankan query menggunakan SQL Server
+                        $s = sqlsrv_query($conn, $query);
+
+                        // Mengecek apakah query berhasil dan data ditemukan
+                        if ($s === false) {
+                            die(print_r(sqlsrv_errors(), true));
+                        }
+
+                        // Menampilkan data dari hasil query
+                        while ($datas = sqlsrv_fetch_array($s, SQLSRV_FETCH_ASSOC)) {
+                            $idsupp = $datas['idsupp'];
+                            $namasupp = $datas['namasupp'];
+                        ?>
+                            <option value="<?php echo $idsupp; ?>"> <?php echo $namasupp; ?> </option>
+                        <?php } ?>
         </select>
+
 		
 	Permintaan Dari                                     
-        <select class="form-control" name='nomor'  >
-             <option selected="selected" ></option>
-			
-			<?	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' and aktif<>'nonaktif' order by nama ");
-				if(mysql_num_rows($sss) > 0){
-			 while($datasss = mysql_fetch_array($sss)){
-				$nomor=$datasss['nomor'];
-				$keterangan=$datasss['keterangan'];
-				$tgllll=$datasss['tgl'];
-				$t=substr($tgllll,0,4);
-				$b=substr($tgllll,-5,2);
-				$h=substr($tgllll,-2,2);
-				$tglllll=$h.'-'.$b.'-'.$t;
-				$bagian=$datasss['bagian'];
-				$nama=$datasss['nama'];
-				$qty=$datasss['qty'];$sisa=$datasss['sisa'];
-				$namabarang=$datasss['namabarang'];
-				$divisi=$datasss['divisi'];?>
-			 <option value="<? echo $nomor; ?>" ><? echo $nama.'/'.$bagian.'/'.$divisi.'/'.$namabarang.'/'.$keterangan.'/'.$tglllll.'/JUMLAH:'.$qty ; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
+        <select class="form-control" name='nomor'>
+            <option selected="selected"></option>
+            <?php
+            // Query untuk mengambil data dari tabel permintaan
+            $query = "SELECT * FROM permintaan WHERE status <> 'selesai' AND aktif <> 'nonaktif' ORDER BY nama";
+            
+            // Menjalankan query menggunakan SQL Server
+            $sss = sqlsrv_query($conn, $query);
+            
+            // Mengecek apakah query berhasil dijalankan
+            if ($sss === false) {
+                die(print_r(sqlsrv_errors(), true));
+            }
+
+            // Mengambil hasil query dan menampilkan data
+            while ($datasss = sqlsrv_fetch_array($sss, SQLSRV_FETCH_ASSOC)) {
+                $nomor = $datasss['nomor'];
+                $keterangan = $datasss['keterangan'];
+                $tgllll = $datasss['tgl'];
+                
+                // Memformat tanggal (menggunakan substring untuk memisah bagian tahun, bulan, hari)
+                // $t = substr($tgllll, 0, 4);
+                // $b = substr($tgllll, -5, 2);
+                // $h = substr($tgllll, -2, 2);
+                // $tglllll = $h . '-' . $b . '-' . $t;
+                
+                $bagian = $datasss['bagian'];
+                $nama = $datasss['nama'];
+                $qty = $datasss['qty'];
+                $sisa = $datasss['sisa'];
+                $namabarang = $datasss['namabarang'];
+                $divisi = $datasss['divisi'];
+            ?>
+                <option value="<?php echo $nomor; ?>">
+                    <?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . $tgllll->format("Y-m-d") . '/JUMLAH:' . $qty; ?>
+                </option>
+            <?php } ?>
         </select>
+
                                     
              Keterangan Pembelian
  <textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px" placeholder=""></textarea>                                    
@@ -341,14 +414,21 @@ $jum=$data_rinci['jum'];
                                    
 <br>
      
-    <?	$sss = mysql_query("SELECT * FROM trincipembelian where nofaktur='$no_faktur'");
-				if(mysql_num_rows($sss) > 0){?>
+    <?php	$query = "SELECT * FROM trincipembelian WHERE nofaktur = ?";
+            $params = array($no_faktur);
+
+            // Eksekusi query
+            $sss = sqlsrv_query($conn, $query, $params);
+
+            // Periksa apakah ada baris yang ditemukan
+            if ($sss && sqlsrv_has_rows($sss)) {
+    ?>
 	&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp	
  <button  name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit" >Simpan</button>
-				<?}?>
+				<?php } ?>
 	  </form>
     </div> 
 </body>

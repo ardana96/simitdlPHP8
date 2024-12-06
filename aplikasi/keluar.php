@@ -1,14 +1,5 @@
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('config.php');
 ?>
 <script language="JavaScript" type="text/javascript" src="suggest.js"></script>
 <style>
@@ -75,49 +66,129 @@ document.getElementById('www').value = string[0];
     }
    }
   </script>
-<?
+<?php
 $datee=date('20y-m-d');
  $jam = date("H:i");
 $date=date('d-m-20y');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
-$no_faktur=kdauto("tpengambilan",'');
-$dd=mysql_query("select * from trincipengambilan where nofaktur='$no_faktur' and sesi='USR' ");
-if(mysql_num_rows($dd) > 0){
-$keadaan='aktif';
+// $no_faktur=kdauto("tpengambilan",'');
+// $dd=mysql_query("select * from trincipengambilan where nofaktur='$no_faktur' and sesi='USR' ");
+// if(mysql_num_rows($dd) > 0){
+// $keadaan='aktif';
+// }
+
+$no_faktur = kdauto("tpengambilan", '');
+
+// Query untuk mengambil data dari tabel trincipengambilan
+$query = "SELECT * FROM trincipengambilan WHERE nofaktur = ? AND sesi = 'USR'";
+$params = array($no_faktur);
+
+// Eksekusi query
+$dd = sqlsrv_query($conn, $query, $params);
+
+// Periksa apakah query berhasil
+if ($dd === false) {
+    die(print_r(sqlsrv_errors(), true)); // Menampilkan error jika query gagal
+}
+
+// Periksa apakah ada data
+if (sqlsrv_has_rows($dd)) {
+    $keadaan = 'aktif';
+} else {
+    $keadaan = 'tidak aktif'; // Opsional jika ingin memberikan status lain
 }
 ?>
 
 <?php
-$query_rinci_jual="SELECT *,sum(jumlah) as jum FROM trincipengambilan WHERE nofaktur='".$no_faktur."' group by idbarang";
-$get_hitung_rinci=mysql_query($query_rinci_jual);
-$hitung=mysql_num_rows($get_hitung_rinci);
-$total_jual=0; $total_item=0;
-while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
-$jml=$hitung_total['jumlah'];
-$sub_total=$hitung_total['sub_total_jual'];
-$total_jual=$sub_total+$total_jual;
-$total_item=$jml+$total_item;}
+
+$query_rinci_jual = "SELECT MAX(idbarang) as idbarang, Max(namabarang) as namabarang,  SUM(jumlah) as jum FROM trincipengambilan WHERE nofaktur = ? GROUP BY idbarang";
+$params = array($no_faktur);
+
+// Eksekusi query
+$get_hitung_rinci = sqlsrv_query($conn, $query_rinci_jual, $params);
+
+// Periksa apakah query berhasil
+if ($get_hitung_rinci === false) {
+    die(print_r(sqlsrv_errors(), true)); // Menampilkan error jika query gagal
+}
+
+$total_jual = 0;
+$total_item = 0;
+
+// Loop untuk memproses hasil query
+while ($hitung_total = sqlsrv_fetch_array($get_hitung_rinci, SQLSRV_FETCH_ASSOC)) {
+    $jml = $hitung_total['jum'];
+   // $sub_total = $hitung_total['sub_total_jual'];
+    //$total_jual += $sub_total;
+    $total_item += $jml;
+}
+
+
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -185,54 +256,55 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 </head>
 
 <body onload="document.getElementById('kd_barang').focus()">
-<?if($keadaan<>'aktif'){?>
+<?php if($keadaan<>'aktif'){?>
 <h4 >PENGELUARAN BARANG </h4>
 
 
 <div style="overflow:scroll;width:600px;height:450px;" id="data_barang">
-        <div class="panel-bod">
-                            <div class="table-responsiv">
+    <div class="panel-bod">
+        <div class="table-responsiv">
 							
-							<form action="aplikasi/simpanrincikeluar.php" method="post" >
+			<form action="aplikasi/simpanrincikeluar.php" method="post" >
 							
-							                            <table class="table table-striped table-bordered table-hove" id="dataTables-exampl">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama Barang</th>
-                                       
-											<th>ID Barang</th>
+				<table class="table table-striped table-bordered table-hove" id="dataTables-exampl">
+                    <thead>
+						<tr>
+							<th>Nama Barang</th>
+						
+							<th>ID Barang</th>
+						
+							<th>Jumlah</th>
+								
+							<th>Tambah</th>
+						</tr>
 										
-                                            <th>Jumlah</th>
-											   
-													    <th>Tambah</th>
-										
-										
-                                        </tr>
-										
-  <tr class="tr_isi">
-  <td><div id="suggestSearch">
-<input name="barang" type="text" id="dbTxt" alt="Search Criteria" onKeyUp="searchSuggest();"  onchange="new sendRequest(this.value)"  autocomplete="off"/>
-<div  id="layer1" onclick="new sendRequest(this.value)"  class="isi_tabelll" ></div></div></td>
-  <td ><label>
-        <input type="text" name="idbarang" id="www" readonly />
-		<input  class="form-contro" type="hidden"  id="asfa" name="kategori" readonly >
-      </label>
- </td>
- <td><input  class="form-contro" type="text"  name="jumlah"  ></td>
+						<tr class="tr_isi">
+							<td>
+								<div id="suggestSearch">
+								<input name="barang" type="text" id="dbTxt" alt="Search Criteria" onKeyUp="searchSuggest();"  onchange="new sendRequest(this.value)"  autocomplete="off"/>
+								<div  id="layer1" onclick="new sendRequest(this.value)"  class="isi_tabelll" ></div></div></td>
+							<td >
+								<label>
+									<input type="text" name="idbarang" id="www" readonly />
+									<input  class="form-contro" type="hidden"  id="asfa" name="kategori" readonly >
+								</label>
+							</td>
+							<td>
+								<input  class="form-contro" type="text"  name="jumlah"  ></td>
 
-	 <td>
-										
-<input type="hidden" name="no_faktur" value=<?php echo $no_faktur; ?> />										
-											<button  name="tombol" class="btn text-muted text-center btn-primary" type="submit">+</button>
-											</td>
-  </tr>
+							<td>
+																
+								<input type="hidden" name="no_faktur" value=<?php echo $no_faktur; ?> />										
+								<button  name="tombol" class="btn text-muted text-center btn-primary" type="submit">+</button>
+							</td>
+						</tr>
 
 
-                                    </thead>
+                    </thead>
                     
-                                </table>
+                </table>
 							
-							</form>
+			</form>
 							
 							
 							
@@ -255,11 +327,11 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 										
                                         </tr>
 										  <?php
-$rinci_jual=mysql_query($query_rinci_jual);
-while( $data_rinci=mysql_fetch_array($rinci_jual)){
+$rinci_jual=sqlsrv_query($conn, $query_rinci_jual, $params);
+while( $data_rinci = sqlsrv_fetch_array($rinci_jual, SQLSRV_FETCH_ASSOC)){
 $idbarang=$data_rinci['idbarang'];
 $namabarang=$data_rinci['namabarang'];
-$jumlah=$data_rinci['jumlah'];
+//$jumlah=$data_rinci['jumlah'];
 $jum=$data_rinci['jum'];
  
   ?>
@@ -293,9 +365,9 @@ $jum=$data_rinci['jum'];
  
 
 <div id="info_transaksi" style="overflow:scroll;height:450px;">
-<button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
+<!-- <button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
                                 Tambah Bagian
-                            </button>
+                            </button> -->
 							
 <!--							
   <div id="scanner">Barcode: 
@@ -305,112 +377,128 @@ $jum=$data_rinci['jum'];
 
  
 
-      <form id="form_penjualan" name="form_penjualan" method="post" action="aplikasi/simpankeluar.php" >
+<form id="form_penjualan" name="form_penjualan" method="post" action="aplikasi/simpankeluar.php" >
        
-        <input class="form-control" name="no_faktur" type="hidden" id="no_faktur" value="<?php echo $no_faktur; ?>" size="16" readonly="readonly" />
-		<input class="form-control" name="id_user" type="hidden" id="id_user" value="<?php echo $id_user; ?>" size="16" readonly="readonly" />
-     
-
-
-		
-                                           Tanggal 
-                                            <input  class="form-control" value="<?php echo $date; ?>" type="text" name="tglambil" >
-		
-		
-                                            
-                                            <input  class="form-control" value="<?php echo $jam; ?>" type="hidden" name="jam" readonly >											
-
-		Nama
-		
-                                            
-                                            <input  class="form-control"  type="text" name="nama" >
-                                    
- 
-                                           
-    Bagian                                      
-        <select class="form-control" name='bagian' required='required'>
-             <option selected="selected" ></option>
-			<?	$s = mysql_query("SELECT * FROM bagian order by bagian asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$idbagian=$datas['id_bagian'];
-				$bagian=$datas['bagian'];?>
-			 <option value="<? echo $idbagian; ?>"> <? echo $bagian; ?>
-			 </option>
-			 
-			 <?}}?>
+	<input class="form-control" name="no_faktur" type="hidden" id="no_faktur" value="<?php echo $no_faktur; ?>" size="16" readonly="readonly" />
+	<input class="form-control" name="id_user" type="hidden" id="id_user" value="<?php echo $id_user; ?>" size="16" readonly="readonly" />
 			
-    
-        </select>
-                                    
+	Tanggal 
+	<input  class="form-control" value="<?php echo $date; ?>" type="text" name="tglambil" >
+	<input  class="form-control" value="<?php echo $jam; ?>" type="hidden" name="jam" readonly >											
+	Nama
+	<input  class="form-control"  type="text" name="nama" >
+    Bagian                                      
+	<select class="form-control" name='bagian' required='required'>
+		<option selected="selected"></option>
+		<?php
+		// Query untuk mengambil data dari tabel bagian
+		$query = "SELECT * FROM bagian ORDER BY bagian ASC";
 
-                                           
+		// Eksekusi query menggunakan SQL Server
+		$s = sqlsrv_query($conn, $query);
+
+		// Periksa apakah query berhasil
+		if ($s === false) {
+			die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+		}
+
+		// Loop untuk mengambil data dan menampilkan opsi dropdown
+		while ($datas = sqlsrv_fetch_array($s, SQLSRV_FETCH_ASSOC)) {
+			$idbagian = $datas['id_bagian'];
+			$bagian = $datas['bagian'];
+		?>
+			<option value="<?php echo $idbagian; ?>"> <?php echo $bagian; ?> </option>
+		<?php } ?>
+	</select>
+
+                                         
     Divisi                                    
-       <select class="form-control" name="divisi" required='required'>
- <option selected="selected" ></option>
- <option value="AMBASADOR">AMBASADOR</option>
- <option value="EFRATA">EFRATA</option>
- <option value="GARMENT">GARMENT</option>
- <option value="MAS">MAS</option>
- <option value="TEXTILE">TEXTILE</option>
- <option value="KAS">PT. KAS</option>
-</select>
+       	<select class="form-control" name="divisi" required='required'>
+			<option selected="selected" ></option>
+			<option value="AMBASADOR">AMBASADOR</option>
+			<option value="EFRATA">EFRATA</option>
+			<option value="GARMENT">GARMENT</option>
+			<option value="MAS">MAS</option>
+			<option value="TEXTILE">TEXTILE</option>
+			<option value="KAS">PT. KAS</option>
+		</select>
 
 
 	Permintaan Dari                                     
-        <select class="form-control" name='nomor' >
-             <option selected="selected" ></option>
-			
-			<?	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' and aktif<>'nonaktif' order by nama");
-				if(mysql_num_rows($sss) > 0){
-			 while($datasss = mysql_fetch_array($sss)){
-				$nomor=$datasss['nomor'];
-				$keterangan=$datasss['keterangan'];
-				$tgllll=$datasss['tgl'];
-				$t=substr($tgllll,0,4);
-				$b=substr($tgllll,-5,2);
-				$h=substr($tgllll,-2,2);
-				$tglllll=$h.'-'.$b.'-'.$t;
-				$bagian=$datasss['bagian'];
-				$nama=$datasss['nama'];
-				$qty=$datasss['qty'];$sisa=$datasss['sisa'];
-				$namabarang=$datasss['namabarang'];
-				$divisi=$datasss['divisi'];?>
-			 <option value="<? echo $nomor; ?>" ><? echo $nama.'/'.$bagian.'/'.$divisi.'/'.$namabarang.'/'.$keterangan.'/'.$tglllll.'/JUMLAH:'.$qty; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select>
+	<select class="form-control" name='nomor'>
+		<option selected="selected"></option>
+		<?php
+		// Query untuk mengambil data dari tabel permintaan
+		$query = "SELECT * FROM permintaan WHERE status <> 'selesai' AND aktif <> 'nonaktif' ORDER BY nama";
 		
-		Jenis Printer / Scanner   
-        <select class="form-control" name="jenisprinter" id='jenisprinter'  onChange='show()' >
- <option selected="selected" ></option>
- <option value="printer">PRINTER</option>
- <option value="scanner">SCANNER</option>
+		// Menjalankan query menggunakan SQL Server
+		$sss = sqlsrv_query($conn, $query);
+		
+		// Mengecek apakah query berhasil dijalankan
+		if ($sss === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
 
-</select>
+		// Mengambil hasil query dan menampilkan data
+		while ($datasss = sqlsrv_fetch_array($sss, SQLSRV_FETCH_ASSOC)) {
+			$nomor = $datasss['nomor'];
+			$keterangan = $datasss['keterangan'];
+			$tgllll = $datasss['tgl'];
+			
+			// Memformat tanggal (menggunakan substring untuk memisah bagian tahun, bulan, hari)
+			// $t = substr($tgllll, 0, 4);
+			// $b = substr($tgllll, -5, 2);
+			// $h = substr($tgllll, -2, 2);
+			// $tglllll = $h . '-' . $b . '-' . $t;
+			
+			$bagian = $datasss['bagian'];
+			$nama = $datasss['nama'];
+			$qty = $datasss['qty'];
+			$sisa = $datasss['sisa'];
+			$namabarang = $datasss['namabarang'];
+			$divisi = $datasss['divisi'];
+		?>
+			<option value="<?php echo $nomor; ?>">
+				<?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . $tgllll->format("Y-m-d") . '/JUMLAH:' . $qty; ?>
+			</option>
+		<?php } ?>
+	</select>
+		
+	Jenis Printer / Scanner   
+	<select class="form-control" name="jenisprinter" id='jenisprinter'  onChange='show()' >
+		<option selected="selected" ></option>
+		<option value="printer">PRINTER</option>
+		<option value="scanner">SCANNER</option>
+
+	</select>
    
- <input   placeholder="ID Perangkat" class="form-control"  type="text" name="id_perangkat" id="id_perangkat" style="display:none;"  >
-  <input   placeholder="Nama Perangkat" class="form-control"  type="text" name="printer" id="printer" style="display:none;"  >
+ 	<input   placeholder="ID Perangkat" class="form-control"  type="text" name="id_perangkat" id="id_perangkat" style="display:none;"  >
+  	<input   placeholder="Nama Perangkat" class="form-control"  type="text" name="printer" id="printer" style="display:none;"  >
     <input   placeholder="Lokasi Printer" class="form-control"  type="text" name="ketlokasi" id="ketlokasi" style="display:none;" >
-Keterangan Pengeluaran
- <textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px" placeholder=""></textarea>                                    
+	Keterangan Pengeluaran
+ 	<textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px" placeholder=""></textarea>                                    
                    
-<br>
-     
-     <?	$sss = mysql_query("SELECT * FROM trincipengambilan where nofaktur='$no_faktur'");
-				if(mysql_num_rows($sss) > 0){?>
+	<br>
+
+		<?php	
+			$query = "SELECT * FROM trincipengambilan WHERE nofaktur = ?";
+			$params = array($no_faktur);
+
+			// Eksekusi query
+			$sss = sqlsrv_query($conn, $query, $params);
+
+			// Periksa apakah ada baris yang ditemukan
+			if ($sss && sqlsrv_has_rows($sss)) {
+		?>
 			&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp	
- <button  name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
-				<?}?>
-	</form>
+			&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+			&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+			&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp	
+ 		<button  name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit" >Simpan</button>
+	<?php } ?>
+</form>
     </div> 
-<?}else{?>
+	<?php }else{?>
 
 
   <div class="col-lg-12">
@@ -437,7 +525,7 @@ Keterangan Pengeluaran
 </div>
  <br /><br />    <br />                                   
 <meta http-equiv=refresh content=60;url='pemakai.php?menu=home'>
-<?}?>
+<?php }?>
 </body>
 </html>
 
@@ -458,7 +546,7 @@ Keterangan Pengeluaran
 	
    <div class="form-group">
                                          
-                                            <input class="form-control" type="text" name="id_bagian" value="<? echo kdauto("bagian","B"); ?>" readonly>
+                                            <input class="form-control" type="text" name="id_bagian" value="<?php echo kdauto("bagian","B"); ?>" readonly>
                                     
                                         </div>
 											

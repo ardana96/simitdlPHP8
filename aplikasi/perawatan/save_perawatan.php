@@ -1,70 +1,67 @@
 <?php
-// Konfigurasi koneksi database
-$servername = "localhost";
-$username = "root";
-$password = "dlris30g";
-$dbname = "sitdl";
+include('../../config.php');
 
-// Membuat koneksi
-$conn = mysql_connect($servername, $username, $password);
-if (!$conn) {
-    die("Connection failed: " . mysql_error());
-}
-
-// Memilih database
-mysql_select_db($dbname, $conn);
-
-// Ambil data header dari form
+// Ambil data dari form
 $nama_perangkat = $_POST['nama_perangkat'];
+
 // Mulai transaksi
-mysql_query("START TRANSACTION", $conn);
+sqlsrv_begin_transaction($conn);
 
-// Insert data ke tabel headers
-$insertHeaderQuery = sprintf(
-    "INSERT INTO tipe_perawatan (nama_perangkat) VALUES ('%s')",
-    mysql_real_escape_string($nama_perangkat)
-);
+$query_insert = "INSERT INTO tipe_perawatan (nama_perangkat)
+    OUTPUT INSERTED.id AS header_id
+    VALUES (?);
+";
 
-$result = mysql_query($insertHeaderQuery, $conn);
-if (!$result) {
-    mysql_query("ROLLBACK", $conn);
-    die("Error inserting header: " . mysql_error());
+$params = array($nama_perangkat);
+$stmt_insert = sqlsrv_query($conn, $query_insert, $params);
+
+if ($stmt_insert) {
+    // Mendapatkan header_id dari OUTPUT clause
+    $row = sqlsrv_fetch_array($stmt_insert, SQLSRV_FETCH_ASSOC);
+    $header_id = $row['header_id'];
+
+    echo "ID: " . $header_id;
+} else {
+    sqlsrv_rollback($conn);
+    die("Error inserting data: " . print_r(sqlsrv_errors(), true));
 }
 
-// Ambil ID header yang baru saja disimpan
-$header_id = mysql_insert_id();
+
+// Ambil ID header yang baru saja disimpan dengan SCOPE_IDENTITY
+// $queryId = "SELECT SCOPE_IDENTITY() AS header_id"; 
+// $stmtId = sqlsrv_query($conn, $queryId);
+
+// if ($stmtId) {
+//     $row = sqlsrv_fetch_array($stmtId, SQLSRV_FETCH_ASSOC);
+//     $header_id = $row['header_id'];
+
+//     echo "ID: " . $header_id;
+// } else {
+//     sqlsrv_rollback($conn);
+//     die("Error fetching ID: " . print_r(sqlsrv_errors(), true));
+// }
 
 // Insert data items yang terkait dengan header_id
 for ($i = 0; $i < count($_POST['nama_perawatan']); $i++) {
     $nama_perawatan = $_POST['nama_perawatan'][$i];
-    
 
-    $insertItemQuery = sprintf(
-        "INSERT INTO tipe_perawatan_item (tipe_perawatan_id, nama_perawatan ) VALUES (%d, '%s')",
-        $header_id,
-        mysql_real_escape_string($nama_perawatan)
-       
-    );
+    $insertItemQuery = "INSERT INTO tipe_perawatan_item (tipe_perawatan_id, nama_perawatan) VALUES (?, ?)";
+    $paramsItem = array($header_id, $nama_perawatan);
+    $stmtItem = sqlsrv_query($conn, $insertItemQuery, $paramsItem);
 
-    $result = mysql_query($insertItemQuery, $conn);
-    if (!$result) {
-        mysql_query("ROLLBACK", $conn);
-        die("Error inserting item: " . mysql_error());
-        echo mysql_error();
+    if (!$stmtItem) {
+        sqlsrv_rollback($conn);
+        die("Error inserting item: " . print_r(sqlsrv_errors(), true));
     }
 }
 
-if($result){
-    header('location:../../user.php?menu=perawatan&stt= Simpan Berhasil');}
-else{
-    echo "transaksi gagal";
-}
 // Commit transaksi jika semua insert berhasil
-mysql_query("COMMIT", $conn);
-echo "Order saved successfully!";
+sqlsrv_commit($conn);
 
-
+// Redirect ke halaman success
+header('Location: ../../user.php?menu=perawatan&stt=Simpan Berhasil');
+exit();
 
 // Tutup koneksi
-mysql_close($conn);
+sqlsrv_close($conn);
 ?>

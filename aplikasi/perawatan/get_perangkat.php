@@ -1,27 +1,34 @@
 <?php
-// Konfigurasi koneksi MySQL
-$server = "localhost";
-$username = "root";
-$password = "dlris30g";
-$database = "sitdl";
-
-// Membuka koneksi
-$connection = mysql_connect($server, $username, $password);
-mysql_select_db($database, $connection);
+// Konfigurasi koneksi SQL Server
+include('../../config.php');
 
 $id = $_GET['id'];
 
 // Query untuk mendapatkan data perangkat utama
-$query = "SELECT * FROM tipe_perawatan WHERE id = '$id'";
-$result = mysql_query($query);
-$perangkat = mysql_fetch_assoc($result);
+$query = "SELECT * FROM tipe_perawatan WHERE id = ?";
+$params = array($id); // Menyiapkan parameter untuk query
+$stmt = sqlsrv_query($conn, $query, $params);
+
+// Memeriksa apakah query berhasil
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Mengambil hasil perangkat utama
+$perangkat = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
 
 // Query untuk mendapatkan data item terkait perangkat
-$queryItems = "SELECT * FROM tipe_perawatan_item WHERE tipe_perawatan_id = '$id'";
-$resultItems = mysql_query($queryItems);
+$queryItems = "SELECT * FROM tipe_perawatan_item WHERE tipe_perawatan_id = ?";
+$stmtItems = sqlsrv_query($conn, $queryItems, $params);
 
-$items = array(); // Menggunakan array() sebagai pengganti []
-while ($item = mysql_fetch_assoc($resultItems)) {
+// Memeriksa apakah queryItems berhasil
+if ($stmtItems === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Membuat array untuk menyimpan data item
+$items = array(); 
+while ($item = sqlsrv_fetch_array($stmtItems, SQLSRV_FETCH_ASSOC)) {
     $items[] = $item;
 }
 
@@ -35,5 +42,8 @@ $response = array (
 echo json_encode($response);
 
 // Tutup koneksi
-mysql_close($connection);
+sqlsrv_free_stmt($stmt);
+sqlsrv_free_stmt($stmtItems);
+sqlsrv_close($conn);
+
 ?>

@@ -5,15 +5,32 @@
 </head>
 <body>
 <?php
-mysql_connect("localhost", "root", "dlris30g") or die(mysql_error());
-mysql_select_db("sitdl") or die(mysql_error());
-if (isset($_GET['search']) && $_GET['search'] != '') {-
- //Add slashes to any quotes to avoid SQL problems.
- $search = $_GET['search'];
- $suggest_query = mysql_query("SELECT * FROM tbarang WHERE namabarang like('%" .$search . "%')  ");
- while($suggest = mysql_fetch_array($suggest_query)) {
-  echo $suggest['namabarang'] . "\n";
- }
+include('config.php');
+if (isset($_GET['search']) && $_GET['search'] != '') {
+    // Ambil parameter pencarian
+    $search = $_GET['search'];
+
+    // Query untuk mendapatkan data barang berdasarkan nama yang mengandung kata kunci pencarian
+    $query = "SELECT * FROM tbarang WHERE namabarang LIKE ?";
+
+    // Menyiapkan parameter pencarian
+    $params = array('%' . $search . '%');
+
+    // Menjalankan query dengan parameter
+    $suggest_query = sqlsrv_query($conn, $query, $params);
+
+    // Cek apakah query berhasil
+    if ($suggest_query === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    // Menampilkan hasil pencarian
+    while ($suggest = sqlsrv_fetch_array($suggest_query, SQLSRV_FETCH_ASSOC)) {
+        echo $suggest['namabarang'] . "\n";
+    }
+
+    // Membebaskan hasil query
+    sqlsrv_free_stmt($suggest_query);
 }
 ?>
 </body>

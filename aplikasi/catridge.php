@@ -32,28 +32,72 @@ document.getElementById('jumlah').focus();
 
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
 
             <div class="inner">
@@ -78,9 +122,9 @@ function kdauto($tabel, $inisial){
                        <!--<a href="user.php?menu=tasupplier"><button  name="tombol" class="btn text-muted text-center btn-primary" type="submit">Tambah Supplier</button></a>
                        -->
 
-                            <button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
+                            <!-- <button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
                                 Tambah 
-                            </button>
+                            </button> -->
                              
                     
 
@@ -101,28 +145,42 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM tbarang a, tvalidasi b where  (a.idbarang = b.IdBarang)");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$IdBarang=$data['IdBarang'];
-				$NamaBarang=$data['namabarang'];
-				$NomorBarang=$data['NomorBarang'];
-                $IsBack = $data['IsBack'];
-                $Id=$data['Id'];
+                                       <?php
+                                // $sql = mysql_query("SELECT * FROM tbarang a, tvalidasi b where  (a.idbarang = b.IdBarang)");
+                                // if(mysql_num_rows($sql) > 0){
+                                // while($data = mysql_fetch_array($sql)){
+
+
+                                $query = "SELECT * FROM tbarang a, tvalidasi b where  (a.idbarang = b.IdBarang)";
+                                    $stmt = sqlsrv_query($conn, $query);
+                                    
+                                    // Periksa apakah query berhasil
+                                    if ($stmt === false) {
+                                        die(print_r(sqlsrv_errors(), true));
+                                    }
+                                    
+                                    // Periksa apakah ada hasil
+                                    if (sqlsrv_has_rows($stmt)) {
+                                        while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                $IdBarang=$data['IdBarang'];
+                                $NamaBarang=$data['namabarang'];
+                                $NomorBarang=$data['NomorBarang'];
+                                $IsBack = $data['IsBack'];
+                                $Id=$data['Id'];
 				?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $IdBarang ?></td>
-                                            <td><? echo $NamaBarang ?></td>
-                                            <td><? echo $NomorBarang ?></td>
-                                            <td><? 
+                                            <td><?php echo $IdBarang ?></td>
+                                            <td><?php echo $NamaBarang ?></td>
+                                            <td><?php echo $NomorBarang ?></td>
+                                            <td><?php 
                                                 if($IsBack == 0){ ?>
                                                     <button  name="tombol" class="btn text-muted text-center btn-danger">Tidak Ada</button>
                                                     <!-- echo "Tidak Ada"; -->
-                                              <?  }else{ ?>
+                                              <?php  }else{ ?>
                                                     <button  name="tombol" class="btn text-muted text-center btn-success">Ada</button>
                                                     <!-- echo "Ada"; -->
-                                               <? } ?></td>
+                                               <?php } ?></td>
                                             
 											 <td class="center">
 											
@@ -161,9 +219,17 @@ function kdauto($tabel, $inisial){
                                              
                                                 <?php
                                                 $id = $data['id']; 
-                                                $query_edit = mysql_query("SELECT * FROM tvalidasi WHERE Id='$Id'");
-                                                //$result = mysqli_query($conn, $query);
-                                                while ($row = mysql_fetch_array($query_edit)) {  
+                                                $query_edit = "SELECT * FROM tvalidasi WHERE Id = ?";
+
+                                                // Siapkan parameter
+                                                $params = array($Id);
+
+                                                // Eksekusi query
+                                                $stmt = sqlsrv_query($conn, $query_edit, $params);
+
+                                          
+                                                // Ambil data menggunakan sqlsrv_fetch_array
+                                                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                                 ?>
                                                  <div class="form-group">
                                                  
@@ -183,20 +249,20 @@ function kdauto($tabel, $inisial){
                                             
                                                 </div>  
 
-                                                <?if($row['IsBack'] == 1) {?>
+                                                <?php if($row['IsBack'] == 1) {?>
 
                                                 <input type="radio" id="html" name="IsBack" value="1" checked="checked">
                                                 <label for="html">Ada</label>
                                                 <input type="radio" id="css" name="IsBack" value="0">
                                                 <label for="css">Tidak ada </label>
 
-                                                <?}else {?>
+                                                <?php }else {?>
 
                                                 <input type="radio" id="html" name="IsBack" value="1" >
                                                 <label for="html">Ada</label>
                                                 <input type="radio" id="css" name="IsBack" value="0" checked="checked">
                                                 <label for="css">Tidak ada </label>
-                                                <?}?>
+                                                <?php }?>
 
                                                <div class="modal-footer">
                                                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -214,7 +280,7 @@ function kdauto($tabel, $inisial){
                                 </div>
                             </div>
                         
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>

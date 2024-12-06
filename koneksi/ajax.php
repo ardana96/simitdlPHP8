@@ -1,25 +1,47 @@
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('../config.php');
 
-$barang=$_GET['barang'];
-$query="SELECT * From tbarang,tkategori
-WHERE  tbarang.idkategori=tkategori.idkategori and namabarang='".$barang."'";
-$get_data=mysql_query($query);
-$hasil=mysql_fetch_array($get_data);
-$idbarang=$hasil['idbarang'];
-$barang=$hasil['barang'];
-$idkategori=$hasil['idkategori'];
-$jenis=$hasil['jenis'];
-$kategori=$hasil['kategori'];
-$stock=$hasil['stock'];
-$data=$idbarang."&&&".$kategori."&&&".$kategori;
-echo $data; ?>
+// Ambil parameter barang
+$barang = $_GET['barang'];
+
+// Query untuk mendapatkan data barang dan kategori
+$query = "SELECT tbarang.idbarang, tbarang.namabarang, tbarang.idkategori,  tkategori.kategori, tbarang.stock
+          FROM tbarang
+          JOIN tkategori ON tbarang.idkategori = tkategori.idkategori
+          WHERE tbarang.namabarang = ?";
+
+// Menyiapkan parameter untuk query
+$params = array($barang);
+
+// Menjalankan query dengan parameter
+$get_data = sqlsrv_query($conn, $query, $params);
+
+// Cek apakah query berhasil
+if ($get_data === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Ambil hasil data
+$hasil = sqlsrv_fetch_array($get_data, SQLSRV_FETCH_ASSOC);
+
+if ($hasil) {
+    // Ambil data dari hasil query
+    $idbarang = $hasil['idbarang'];
+    $barang = $hasil['namabarang'];
+    $idkategori = $hasil['idkategori'];
+   // $jenis = $hasil['jenis'];
+    $kategori = $hasil['kategori'];
+    $stock = $hasil['stock'];
+
+    // Gabungkan data menjadi string
+    $data = $idbarang . "&&&" . $kategori . "&&&" . $kategori;
+
+    // Output data
+    echo $data;
+} else {
+    echo "Data tidak ditemukan.";
+}
+
+// Tutup koneksi
+sqlsrv_free_stmt($get_data);
+?>
