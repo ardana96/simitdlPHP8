@@ -1,5 +1,5 @@
 <?php
-include('../config.php');
+include('config.php');
 
 ?>
 <script language="JavaScript" type="text/javascript" src="suggest.js"></script>
@@ -332,7 +332,7 @@ if (isset($_GET['nama'])) {
 // $total_jual=$sub_total+$total_jual;
 // $total_item=$jml+$total_item;}
 
-$query_rinci_jual = "SELECT idbarang, SUM(jumlah) AS jum, SUM(sub_total_jual) AS total_jual 
+$query_rinci_jual = "SELECT idbarang, SUM(jumlah) AS jum 
                      FROM trincipengambilan 
                      WHERE nofaktur = ? 
                      GROUP BY idbarang";
@@ -353,8 +353,8 @@ $total_item = 0;
 // Mengambil hasil query
 while ($hitung_total = sqlsrv_fetch_array($get_hitung_rinci, SQLSRV_FETCH_ASSOC)) {
     $jml = $hitung_total['jum'];  // Jumlah total barang
-    $sub_total = $hitung_total['total_jual'];  // Subtotal per item
-    $total_jual += $sub_total;  // Total keseluruhan untuk penjualan
+    //$sub_total = $hitung_total['total_jual'];  // Subtotal per item
+    //$total_jual += $sub_total;  // Total keseluruhan untuk penjualan
     $total_item += $jml;  // Total jumlah item
 }
 
@@ -428,7 +428,7 @@ document.location.href="aplikasi/simpanrinciambil.php?kd_barang="+kd_barang+"&no
 
 <h4 ><?php if(isset($_GET['stt'])){
 $stt=$_GET['stt'];
-echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "><?}
+echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "><?php }
 ?> PENGAMBILAN BARANG </h4>
 
 
@@ -511,8 +511,8 @@ $angka3 = 2;
 while ($data_rinci = sqlsrv_fetch_array($rinci_jual, SQLSRV_FETCH_ASSOC)) {
 $idbarang=$data_rinci['idbarang'];
 $namabarang=$data_rinci['namabarang'];
-$jumlah=$data_rinci['jumlah'];
-$jum=$data_rinci['jum'];
+//$jumlah=$data_rinci['jumlah'];
+$jum=$data_rinci['jumlah'];
  
   ?>
   <tr class="tr_isi">
@@ -526,7 +526,7 @@ $jum=$data_rinci['jum'];
  <input  class="form-control"  type="hidden" id="divisiup<?php echo $angka3++; ?>"  name="divisi" value="<?php echo $divisi; ?>"  >
 											<input type="hidden" name="kd_barang" value=<?php echo $idbarang; ?> />
 <input type="hidden" name="no_faktur" value=<?php echo $no_faktur; ?> />
-<input type="hidden" name="noper" id="noper" value="<? echo $noper;?>"  />										
+<input type="hidden" name="noper" id="noper" value="<?php echo $noper;?>"  />										
 											<button  name="tombol" class="btn text-muted text-center btn-danger" type="submit" onclick="return confirm('Apakah anda yakin akan menghapus data ini?')">X</button>
 											</form></td>
   </tr>
@@ -580,70 +580,99 @@ $jum=$data_rinci['jum'];
                                     
 
                                            
-    Bagian                                      
-        <select class="form-control" name='bagian' required='required' onchange="new permintaan2(this.value)">
-             <option selected="selected"  value="<?php echo $id_bagianup; ?>"><?php echo $bagianup; ?></option>
-			<?php	$s = mysql_query("SELECT * FROM bagian order by bagian asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$idbagian=$datas['id_bagian'];
-				$bagian=$datas['bagian'];?>
-			 <option value="<? echo $idbagian; ?>"> <? echo $bagian; ?>
-			 </option>
-			 
-			 <?php}}?>
-			
-    
-        </select>
+Bagian                                      
+<select class="form-control" name='bagian' required='required' onchange="new permintaan2(this.value)">
+    <option selected="selected" value="<?php echo $id_bagianup; ?>"><?php echo $bagianup; ?></option>
+    <?php
+    // Query untuk mengambil data dari tabel bagian
+    $query = "SELECT * FROM bagian ORDER BY bagian ASC";
+    $s = sqlsrv_query($conn, $query);
+
+    // Periksa apakah query berhasil
+    if ($s === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    // Loop untuk menampilkan data
+    while ($datas = sqlsrv_fetch_array($s, SQLSRV_FETCH_ASSOC)) {
+        $idbagian = $datas['id_bagian'];
+        $bagian = $datas['bagian'];
+        ?>
+        <option value="<?php echo $idbagian; ?>"> <?php echo $bagian; ?>
+        </option>
+    <?php } ?>
+</select>
+
                                     
 
                                            
-    Divisi                                    
-       <select class="form-control" name="divisi" required='required' onchange="new permintaan3(this.value)">
- <option selected="selected" value="<?php echo $divisi; ?>"><?php echo $divisi; ?></option>
- <option value="AMBASADOR">AMBASADOR</option>
- <option value="EFRATA">EFRATA</option>
- <option value="GARMENT">GARMENT</option>
- <option value="MAS">MAS</option>
- <option value="TEXTILE">TEXTILE</option>
+Divisi                                    
+<select class="form-control" name="divisi" required='required' onchange="new permintaan3(this.value)">
+    <option selected="selected" value="<?php echo $divisi; ?>"><?php echo $divisi; ?></option>
+    <option value="AMBASADOR">AMBASADOR</option>
+    <option value="EFRATA">EFRATA</option>
+    <option value="GARMENT">GARMENT</option>
+    <option value="MAS">MAS</option>
+    <option value="TEXTILE">TEXTILE</option>
 </select>
        
-	Permintaan Dari                                     
-        <select class="form-control" name='nomor' >
-             <option selected="selected" ></option>
-			
-			<?php	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' and aktif<>'nonaktif' order by nama");
-				if(mysql_num_rows($sss) > 0){
-			 while($datasss = mysql_fetch_array($sss)){
-				$nomor=$datasss['nomor'];
-				$keterangan=$datasss['keterangan'];
-				$tgllll=$datasss['tgl'];
-				$t=substr($tgllll,0,4);
-				$b=substr($tgllll,-5,2);
-				$h=substr($tgllll,-2,2);
-				$tglllll=$h.'-'.$b.'-'.$t;
-				$bagian=$datasss['bagian'];
-				$nama=$datasss['nama'];
-				$qty=$datasss['qty'];$sisa=$datasss['sisa'];
-				$namabarang=$datasss['namabarang'];
-				$divisi=$datasss['divisi'];?>
-			 <option value="<? echo $nomor; ?>" ><? echo $nama.'/'.$bagian.'/'.$divisi.'/'.$namabarang.'/'.$keterangan.'/'.$tglllll.'/JUM:'.$qty.'/SISA:'.$sisa ; ?>
-			 </option>
-			 
-			 <?php }}?>
-			
+Permintaan Dari                                     
+<select class="form-control" name='nomor'>
+    <option selected="selected"></option>
+    <?php
+    // Query untuk mengambil data dari tabel permintaan
+    $query = "SELECT * FROM permintaan WHERE status <> 'selesai' AND aktif <> 'nonaktif' ORDER BY nama";
     
-        </select>
+    // Menjalankan query menggunakan SQL Server
+    $sss = sqlsrv_query($conn, $query);
+    
+    // Mengecek apakah query berhasil dijalankan
+    if ($sss === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    // Mengambil hasil query dan menampilkan data
+    while ($datasss = sqlsrv_fetch_array($sss, SQLSRV_FETCH_ASSOC)) {
+        $nomor = $datasss['nomor'];
+        $keterangan = $datasss['keterangan'];
+        $tgllll = $datasss['tgl'];
+        
+        // Memformat tanggal (menggunakan substring untuk memisah bagian tahun, bulan, hari)
+        // $t = substr($tgllll, 0, 4);
+        // $b = substr($tgllll, -5, 2);
+        // $h = substr($tgllll, -2, 2);
+        // $tglllll = $h . '-' . $b . '-' . $t;
+        
+        $bagian = $datasss['bagian'];
+        $nama = $datasss['nama'];
+        $qty = $datasss['qty'];
+        $sisa = $datasss['sisa'];
+        $namabarang = $datasss['namabarang'];
+        $divisi = $datasss['divisi'];
+    ?>
+        <option value="<?php echo $nomor; ?>">
+            <?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' .$tgllll .'/'. $keterangan . '/' . '/JUMLAH:' . $qty; ?>
+        </option>
+    <?php } ?>
+</select>
 <br>
-     <?php	$sss = mysql_query("SELECT * FROM trincipengambilan where nofaktur='$no_faktur'");
-				if(mysql_num_rows($sss) > 0){?>
+<?php	
+			$query = "SELECT * FROM trincipengambilan WHERE nofaktur = ?";
+			$params = array($no_faktur);
+
+			// Eksekusi query
+			$sss = sqlsrv_query($conn, $query, $params);
+
+			// Periksa apakah ada baris yang ditemukan
+			if ($sss && sqlsrv_has_rows($sss)) {
+		?>
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
 
  <button name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
-				<?php}?>
+				<?php } ?>
 	  </form>
     </div>	
 </body>
