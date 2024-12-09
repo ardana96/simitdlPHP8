@@ -172,9 +172,9 @@ $tgll=date('20y-01-01');
                     </a>
                     <ul class="collapse" id="pagesr-nav">
                         <li><a href="user.php?menu=taperakitan"><i class="icon-angle-right"></i>  Proses Perakitan </a></li>
-						<li><a href="user.php?menu=stockpc"><i class="icon-angle-right"></i>  Stock Komputer Show</a></li>
-							<li><a href="user.php?menu=stockpchidden"><i class="icon-angle-right"></i>  Stock Komputer Hidden</a></li>
-<li class=""><a href="user.php?menu=rperakitan" ><i class="icon-angle-right"></i>  Daftar Perakitan Terpasang</a></li>                   
+						<li><a href="user.php?menu=stockpc" style="color: red;"><i class="icon-angle-right"></i> Stock Komputer Show</a> </li>
+							<li><a href="user.php?menu=stockpchidden" style="color: red;"><i class="icon-angle-right"></i> Stock Komputer Hidden</a> </li>
+<li class=""><a href="user.php?menu=rperakitan" style="color: red;" ><i class="icon-angle-right"></i>  Daftar Perakitan Terpasang</a></li>                   
 				   </ul>
                 </li>
 				 <!--	

@@ -12,28 +12,72 @@ var evt = (evt) ? evt : ((event) ? event : null);
 document.onkeypress = dontEnter;
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
     <div class="inner">
 		    <div class="row">
@@ -47,7 +91,7 @@ function kdauto($tabel, $inisial){
                <div class="panel panel-danger">
 			   <?php if(isset($_GET['stt'])){
 $stt=$_GET['stt'];
-echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "><?}
+echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "><?php }
 ?> 
                         <div class="panel-heading">
                    
@@ -60,12 +104,12 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 		
    <div class="form-group">
    <b>Nama Komputer</b>                                              
-                                            <input class="form-control" type="text" name="idpc" value="<? echo kdauto("tpc","PC"); ?>" readonly  >
+                                            <input class="form-control" type="text" name="idpc" value="<?php echo kdauto("tpc","PC"); ?>" readonly  >
                                     
                                         </div>
 										   <div class="form-group">
                                           
-                                            <input class="form-control" type="hidden" name="nofaktur" value="<? echo kdauto("tpengambilan",""); ?>" readonly  >
+                                            <input class="form-control" type="hidden" name="nofaktur" value="<?php echo kdauto("tpengambilan",""); ?>" readonly  >
                                     
                                         </div>
 										 <div class="form-group">
@@ -81,59 +125,80 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
 	
    <div class="form-group">
  <b>Motherboard </b><font color=red>'00001'</font>         
-      <select class="form-control" name='mobo' >	 <option> </option>
-            
-			<?	$s1 = mysql_query("SELECT * FROM tbarang where idkategori='00001' and stock > '0' ");
-				if(mysql_num_rows($s1) > 0){
-			 while($datas1 = mysql_fetch_array($s1)){
-				$idbarang=$datas1['idbarang'];
-				$namabarang=$datas1['namabarang'];
-				$stock=$datas1['stock'];?>
-			 <option value="<? echo $idbarang; ?>"> <? echo $namabarang; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+ <select class="form-control" name='mobo'>
+    <option> </option>
+    <?php
+    // Query untuk mengambil data dari tabel tbarang
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00001' AND stock > 0";
+    $result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+    // Periksa apakah query berhasil
+    if ($result === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    // Iterasi data hasil query
+    while ($datas1 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+        $idbarang = $datas1['idbarang'];
+        $namabarang = $datas1['namabarang'];
+        $stock = $datas1['stock'];
+    ?>
+        <option value="<?php echo $idbarang; ?>"><?php echo $namabarang; ?></option>
+    <?php } ?>
+</select>
+
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>Prosesor</b><font color=red>'00002'</font>           
-      <select class="form-control" name='prosesor'><option> </option>
-            
-			<?	$s2 = mysql_query("SELECT * FROM tbarang where idkategori='00002' and stock > '0'");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$idbarang2=$datas2['idbarang'];
-				$namabarang2=$datas2['namabarang'];?>
-			 <option value="<? echo $idbarang2; ?>"> <? echo $namabarang2; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+      <select class="form-control" name='prosesor'>
+    <option> </option>
+    <?php
+    // Query untuk mengambil data dari tabel tbarang
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00002' AND stock > 0";
+    $result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+    // Periksa apakah query berhasil
+    if ($result === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    // Iterasi data hasil query
+    while ($datas2 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+        $idbarang2 = $datas2['idbarang'];
+        $namabarang2 = $datas2['namabarang'];
+    ?>
+        <option value="<?php echo $idbarang2; ?>"><?php echo $namabarang2; ?></option>
+    <?php } ?>
+</select>
+
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>Power Supply</b><font color=red>'00003'</font>          
-      <select class="form-control" name='ps'><option> </option>
-            
-			<?	$s3 = mysql_query("SELECT * FROM tbarang where idkategori='00003' and stock > '0'");
-				if(mysql_num_rows($s3) > 0){
-			 while($datas3 = mysql_fetch_array($s3)){
-				$idbarang3=$datas3['idbarang'];
-				$namabarang3=$datas3['namabarang'];?>
-			 <option value="<? echo $idbarang3; ?>"> <? echo $namabarang3; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+ <select class="form-control" name='ps'>
+    <option> </option>
+    <?php
+    // Query untuk mengambil data dari tabel tbarang
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00003' AND stock > 0";
+    $result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+    // Periksa apakah query berhasil
+    if ($result === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    // Iterasi data hasil query
+    while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+        $idbarang3 = $datas3['idbarang'];
+        $namabarang3 = $datas3['namabarang'];
+    ?>
+        <option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+    <?php } ?>
+</select>
+
                                         
                                     
                                         </div>
@@ -141,37 +206,49 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
  <b>Cassing</b><font color=red>'00004'</font>           
       <select class="form-control" name='casing' ><option> </option>
             
-			<?	$s4 = mysql_query("SELECT * FROM tbarang where idkategori='00004' and stock > '0' ");
-				if(mysql_num_rows($s4) > 0){
-			 while($datas4 = mysql_fetch_array($s4)){
-				$idbarang4=$datas4['idbarang'];
-				$namabarang4=$datas4['namabarang'];?>
-			 <option value="<? echo $idbarang4; ?>"> <? echo $namabarang4; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  <?php
+    // Query untuk mengambil data dari tabel tbarang
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00004' AND stock > 0";
+    $result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+    // Periksa apakah query berhasil
+    if ($result === false) {
+        die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+    }
+
+    // Iterasi data hasil query
+    while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+        $idbarang3 = $datas3['idbarang'];
+        $namabarang3 = $datas3['namabarang'];
+    ?>
+        <option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+    <?php } ?>
+</select>
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>Harddisk Slot 1</b><font color=red>'00005'</font>           
-      <select class="form-control" name='hd1' ><option> </option>
+      	<select class="form-control" name='hd1' ><option> </option>
             
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' and stock > '0'");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $idbarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+			<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00005' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
+		</select>
                                         
                                     
                                         </div>
@@ -179,18 +256,24 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
  <b>Harddisk Slot 2</b><font color=red>'00005'</font>           
       <select class="form-control" name='hd2' ><option> </option>
             
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' and stock > '0'");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $idbarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  <?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00005' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
+		</select>
                                         
                                     
                                         </div>
@@ -198,18 +281,24 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
  <b>RAM Slot 1</b><font color=red>'00006'</font>          
       <select class="form-control" name='ram1' ><option> </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' and stock > '0'");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $idbarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  <?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00006' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
+		</select>
                                         
                                     
                                         </div>
@@ -217,18 +306,24 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
  <b>RAM Slot 2</b><font color=red>'00006'</font>          
       <select class="form-control" name='ram2' ><option> </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' and stock > '0'");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $idbarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  		<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00006' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
+		</select>
                                         
                                     
                                         </div>
@@ -236,18 +331,24 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
  <b>Fan Prosesor</b><font color=red>'00007'</font>         
       <select class="form-control" name='fan' ><option> </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00007' and stock > '0'");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $idbarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  <?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00007' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
+		</select>
                                         
                                     
                                         </div>
@@ -255,18 +356,24 @@ echo "".$stt."";?><img src="img/centang.png" style="width: 50px; height: 30px; "
  <b>DVD Internal</b> <font color=red>'00008'</font>         
       <select class="form-control" name='dvd' ><option> </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00008' and stock > '0'");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $idbarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  <?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00008' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
+		</select>
                                         
                                     
                                         </div>

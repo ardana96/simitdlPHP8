@@ -621,7 +621,7 @@ Permintaan Dari
     <option selected="selected"></option>
     <?php
     // Query untuk mengambil data dari tabel permintaan
-    $query = "SELECT * FROM permintaan WHERE status <> 'selesai' AND aktif <> 'nonaktif' ORDER BY nama";
+    $query = "SELECT * FROM permintaan WHERE 'status' != 'selesai' AND aktif != 'nonaktif' ORDER BY nama ";
     
     // Menjalankan query menggunakan SQL Server
     $sss = sqlsrv_query($conn, $query);
@@ -651,7 +651,7 @@ Permintaan Dari
         $divisi = $datasss['divisi'];
     ?>
         <option value="<?php echo $nomor; ?>">
-            <?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' .$tgllll .'/'. $keterangan . '/' . '/JUMLAH:' . $qty; ?>
+            <?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' .$tgllll->format("Y-m-d") .'/'. $keterangan . '/' . '/JUMLAH:' . $qty; ?>
         </option>
     <?php } ?>
 </select>

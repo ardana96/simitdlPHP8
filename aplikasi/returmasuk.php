@@ -38,26 +38,31 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <? $date=date('20y-m');
+                                       <?php 
+                                       
+                                       $date=date('20y-m');
 									   $datee=$date.'%';
-									   $sql = mysql_query("SELECT * from tpembelian,tsupplier where tpembelian.idsupp=tsupplier.idsupp ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$nofaktur=$data['nofaktur'];
-				$idsupp=$data['idsupp'];
-					$namasupp=$data['namasupp'];
-				$tglbeli=$data['tglbeli'];
-				$keterangan=$data['keterangan'];
+									   $sql = "SELECT * FROM tpembelian, tsupplier WHERE tpembelian.idsupp = tsupplier.idsupp";
+                                        $query = sqlsrv_query($conn, $sql);
+
+                                        // Memeriksa apakah ada baris yang dikembalikan
+                                        if ($query !== false) {
+                                            while ($data = sqlsrv_fetch_array($query, SQLSRV_FETCH_ASSOC)) {
+                                        $nofaktur=$data['nofaktur'];
+                                        $idsupp=$data['idsupp'];
+                                            $namasupp=$data['namasupp'];
+                                        $tglbeli=$data['tglbeli'];
+                                        $keterangan=$data['keterangan'];
 				
 		
 			
 				?>
 				
                                         <tr class="gradeC">
-										<td><? echo $nofaktur ?></td>
-										<td><? echo $tglbeli ?></td>
-                                            <td><? echo $namasupp ?></td>
-                                            <td><? echo $keterangan?></td>
+										<td><?php echo $nofaktur ?></td>
+										<td><?php echo $tglbeli->format("Y-m-d") ?></td>
+                                            <td><?php echo $namasupp ?></td>
+                                            <td><?php echo $keterangan?></td>
 										
 										
                              
@@ -73,7 +78,7 @@
 											</td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }} ?>                      
                                     </tbody>
                                 </table>
                             </div>

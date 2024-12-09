@@ -1,42 +1,54 @@
 <?php
 include('../config.php');
 if(isset($_POST['tombol'])){
-$kd_barang=$_POST['kd_barang'];
-$no_faktur=$_POST['no_faktur'];
-$nama=$_POST['nama'];
-$bagian=$_POST['bagian'];
-$divisi=$_POST['divisi'];
-$noper=$_POST['noper'];
+    $kd_barang = $_POST['kd_barang'];
+    $no_faktur = $_POST['no_faktur'];
+    $nama = $_POST['nama'];
+    $bagian = $_POST['bagian'];
+    $divisi = $_POST['divisi'];
+    $noper = $_POST['noper'];
 
+    // Menghapus data jika nomor permintaan ada
+    if ($noper != '') {
+        $cd_query = "DELETE FROM rincipermintaan WHERE nomor = ? AND nofaktur = ?";
+        $cd_params = array($noper, $no_faktur);
+        $cdd = sqlsrv_query($conn, $cd_query, $cd_params);
+    }
 
-if($noper<>''){
-$cd="delete from rincipermintaan where nomor='".$noper."' and nofaktur='".$no_faktur."'";	
-$cdd=mysql_query($cd);	
+    // Mengambil jumlah dari trincipengambilan
+    $s_query = "SELECT SUM(jumlah) AS jum FROM trincipengambilan WHERE idbarang = ? AND nofaktur = ?";
+    $s_params = array($kd_barang, $no_faktur);
+    $ss = sqlsrv_query($conn, $s_query, $s_params);
+    while ($dataa = sqlsrv_fetch_array($ss, SQLSRV_FETCH_ASSOC)) {
+        $jum = $dataa['jum'];
+    }
+
+    // Mengambil data stock dari tbarang
+    $b_query = "SELECT * FROM tbarang WHERE idbarang = ?";
+    $b_params = array($kd_barang);
+    $bb = sqlsrv_query($conn, $b_query, $b_params);
+    while ($dataaa = sqlsrv_fetch_array($bb, SQLSRV_FETCH_ASSOC)) {
+        $stock = $dataaa['stock'];
+    }
+
+    // Menambah stock
+    $stockbaru = $stock + $jum;
+
+    // Update stock di tbarang
+    $qq_query = "UPDATE tbarang SET stock = ? WHERE idbarang = ?";
+    $qq_params = array($stockbaru, $kd_barang);
+    $perintah = sqlsrv_query($conn, $qq_query, $qq_params);
+
+    // Menghapus data dari trincipengambilan
+    $query_delete = "DELETE FROM trincipengambilan WHERE idbarang = ? AND nofaktur = ?";
+    $delete_params = array($kd_barang, $no_faktur);
+    $update = sqlsrv_query($conn, $query_delete, $delete_params);
+
+    // Redirect berdasarkan hasil update
+    if ($update) {
+        header('Location: ../user.php?menu=freturpengambilanadmin&nama=' . urlencode($nama) . '&bagian=' . urlencode($bagian) . '&divisi=' . urlencode($divisi) . '&no_faktur=' . urlencode($no_faktur));
+    } else {
+        header('Location: ../user.php?menu=freturpengambilanadmin&nama=' . urlencode($nama) . '&bagian=' . urlencode($bagian) . '&divisi=' . urlencode($divisi) . '&no_faktur=' . urlencode($no_faktur));
+    }
 }
-
-
-$s="select sum(jumlah) as jum from trincipengambilan where idbarang='".$kd_barang."' and nofaktur='".$no_faktur."'";
-$ss=mysql_query($s);
-while($dataa=mysql_fetch_array($ss)){
-$jum=$dataa['jum'];}
-
-$b="select * from tbarang where idbarang='".$kd_barang."'";
-$bb=mysql_query($b);
-while($dataaa=mysql_fetch_array($bb)){
-$stock=$dataaa['stock'];}
-
-$stockbaru=$stock+$jum;
-
-
-$qq="update tbarang set stock='$stockbaru' where idbarang='".$kd_barang."'";	
-$perintah=mysql_query($qq);
-
-$query_delete="delete from trincipengambilan where idbarang='".$kd_barang."' and nofaktur='".$no_faktur."'";	
-$update=mysql_query($query_delete);
-
-
-if($update){
-header('location:../user.php?menu=freturpengambilanadmin&nama='.$nama.'&bagian='.$bagian.'&divisi='.$divisi.'&no_faktur='.$no_faktur);}
-else{
-header('location:../user.php?menu=freturpengambilanadmin&nama='.$nama.'&bagian='.$bagian.'&divisi='.$divisi.'&no_faktur='.$NO_faktur);}}
 ?>

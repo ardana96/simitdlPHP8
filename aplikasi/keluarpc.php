@@ -9,36 +9,39 @@ document.onkeypress = dontEnter;
 
 </script>
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('config.php');
 ?>
-<?
-	if(isset($_POST['idpc'])){
-$idpcc=$_POST['idpc'];
-$lihat=mysql_query("select * from tpc where idpc='$idpcc'");
-  while($result=mysql_fetch_array($lihat)){
-	  $idpc=$result['idpc'];
-	 $mobo=$result['mobo'];
-	 $prosesor=$result['prosesor'];
-$ps=$result['ps'];
-$casing=$result['casing'];
-$hd1=$result['hd1'];
-$ram1=$result['ram1'];
-$ram2=$result['ram2'];
-$hd2=$result['hd2'];
-$fan=$result['fan'];
-$dvd=$result['dvd'];
-$model=$result['model'];
-$seri=$result['seri'];
-	}}	  
+<?php
+if(isset($_POST['idpc'])){
+	$idpcc = $_POST['idpc'];
+
+	// Query untuk mendapatkan data dari tabel tpc
+	$query = "SELECT * FROM tpc WHERE idpc = ?";
+	$params = array($idpcc);
+	$stmt = sqlsrv_query($conn, $query, $params);
+
+	// Validasi apakah query berhasil
+	if ($stmt === false) {
+		die(print_r(sqlsrv_errors(), true));
+	}
+
+	// Iterasi hasil query
+	while ($result = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+		$idpc = $result['idpc'];
+		$mobo = $result['mobo'];
+		$prosesor = $result['prosesor'];
+		$ps = $result['ps'];
+		$casing = $result['casing'];
+		$hd1 = $result['hd1'];
+		$ram1 = $result['ram1'];
+		$ram2 = $result['ram2'];
+		$hd2 = $result['hd2'];
+		$fan = $result['fan'];
+		$dvd = $result['dvd'];
+		$model = $result['model'];
+		$seri = $result['seri'];
+	}
+}	  
 
 
 ?>
@@ -52,45 +55,106 @@ border:1px;
 	background-color: #FFF;}
 </style>
 
-<?
+<?php
 $datee=date('20y-m-d');
  $jam = date("H:i");
 $date=date('ymd');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
 $no_faktur=kdauto("tpengambilan",'');
 ?>
 
 <?php
-$query_rinci_jual="SELECT * FROM trincipengambilan WHERE nofaktur='".$no_faktur."'";
-$get_hitung_rinci=mysql_query($query_rinci_jual);
-$hitung=mysql_num_rows($get_hitung_rinci);
-$total_jual=0; $total_item=0;
-while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
-$jml=$hitung_total['jumlah'];
-$sub_total=$hitung_total['sub_total_jual'];
-$total_jual=$sub_total+$total_jual;
-$total_item=$jml+$total_item;}
+$query_rinci_jual = "SELECT * FROM trincipengambilan WHERE nofaktur = ?";
+$params = array($no_faktur);
+$stmt = sqlsrv_query($conn, $query_rinci_jual, $params);
+
+// Validasi apakah query berhasil
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+// Menghitung jumlah baris
+$hitung = 0;
+$total_jual = 0;
+$total_item = 0;
+
+// Iterasi hasil query
+while ($hitung_total = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $jml = $hitung_total['jumlah'];
+    //$sub_total = $hitung_total['sub_total_jual'];
+    //$total_jual += $sub_total;
+    $total_item += $jml;
+    $hitung++;
+}
+
+// Bebaskan statement
+sqlsrv_free_stmt($stmt);
+
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -167,59 +231,116 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 Nomor
 		
                                             
-                                            <input  readonly class="form-control"  type="text" name="nomor" value="<? echo kdauto("pcaktif",""); ?>" >
+                                            <input  readonly class="form-control"  type="text" name="nomor" value="<?php echo kdauto("pcaktif",""); ?>" >
                        
 Permintaan Dari                                     
-        <select class="form-control" name='nomorminta' >
-             <option selected="selected" ></option>
-			
-			<?	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' order by nama");
-				if(mysql_num_rows($sss) > 0){
-			 while($datasss = mysql_fetch_array($sss)){
-				$nomor=$datasss['nomor'];
-				$keterangan=$datasss['keterangan'];
-				$tgllll=$datasss['tgl'];
-				$t=substr($tgllll,0,4);
-				$b=substr($tgllll,-5,2);
-				$h=substr($tgllll,-2,2);
-				$tglllll=$h.'-'.$b.'-'.$t;
-				$bagian=$datasss['bagian'];
-				$nama=$datasss['nama'];
-				$qty=$datasss['qty'];$sisa=$datasss['sisa'];
-				$namabarang=$datasss['namabarang'];
-				$divisi=$datasss['divisi'];?>
-			 <option value="<? echo $nomor; ?>" ><? echo $nama.'/'.$bagian.'/'.$divisi.'/'.$namabarang.'/'.$keterangan.'/'.$tglllll.'/JUM:'.$qty.'/SISA:'.$sisa ; ?>
-			 </option>
-			 
-			 <?}}?>
-			
+       
+
+		<select class="form-control" name='nomorminta' >
+			<option selected="selected" ></option>
+
+			<?php
+			// Query untuk mengambil data dari tabel 'permintaan'
+			$query = "SELECT * FROM permintaan WHERE status <> 'selesai' ORDER BY nama";
+			$stmt = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($stmt !== false) {
+				while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$nomor = $row['nomor'];
+					$keterangan = $row['keterangan'];
+					$tgllll = $row['tgl']->format('Y-m-d'); // Konversi DateTime ke format string
+					// $t = substr($tgllll, 0, 4);
+					// $b = substr($tgllll, 5, 2);
+					// $h = substr($tgllll, 8, 2);
+					// $tglllll = $h . '-' . $b . '-' . $t;
+					$bagian = $row['bagian'];
+					$nama = $row['nama'];
+					$qty = $row['qty'];
+					$sisa = $row['sisa'];
+					$namabarang = $row['namabarang'];
+					$divisi = $row['divisi'];
+			?>
+					<option value="<?php echo $nomor; ?>">
+						<?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . $tgllll . '/JUM:' . $qty . '/SISA:' . $sisa; ?>
+					</option>
+			<?php
+				}
+			} else {
+				echo "<option>Error fetching data</option>";
+			}
+			?>
+
+		</select>
+		
+		 <select class="form-control" name='noper' style='display:none;'>
+            <option selected="selected" value="<?php echo $nopeminta; ?>"><?php echo $nmpeminta; ?></option>
     
-        </select>	   
+                <?php
+                // Query untuk mengambil data dari tabel permintaan
+                $query = "SELECT * FROM permintaan WHERE status <> 'selesai' AND aktif <> 'nonaktif' ORDER BY nama";
+                $stmt = sqlsrv_query($conn, $query);
+
+                if ($stmt === false) {
+                    die(print_r(sqlsrv_errors(), true));
+                }
+
+                // Loop untuk menampilkan data dalam elemen select
+                while ($datasss = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    $nomor = $datasss['nomor'];
+                    $keterangan = $datasss['keterangan'];
+                    $tgllll = $datasss['tgl']->format('Y-m-d'); // Format DateTime ke string
+                  
+                    $bagian = $datasss['bagian'];
+                    $nama = $datasss['nama'];
+                    $qty = $datasss['qty'];
+                    $sisa = $datasss['sisa'];
+                    $namabarang = $datasss['namabarang'];
+                    $divisi = $datasss['divisi'];
+                    ?>
+                    <option value="<?php echo $nomor; ?>">
+                        <?php echo $nama . '/' . $bagian . '/' . $divisi . '/' . $namabarang . '/' . $keterangan . '/' . $tgllll . '/JUMLAH:' . $qty; ?>
+                    </option>
+                <?php
+                }
+                sqlsrv_free_stmt($stmt);
+                ?>
+        </select>
 			Divisi                                    
        <select class="form-control" name="divisi" required='required'>
- <option selected="selected" ></option>
- <option value="AMBASADOR">AMBASADOR</option>
- <option value="EFRATA">EFRATA</option>
- <option value="GARMENT">GARMENT</option>
- <option value="MAS">MAS</option>
- <option value="TEXTILE">TEXTILE</option>
-</select>						
- Bagian Pemakai                                     
-        <select class="form-control" name='bagian' required='required'> <option selected="selected" ></option>
-            
-			<?	$s = mysql_query("SELECT * FROM bagian_pemakai order by bag_pemakai asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$id_bag_pemakai=$datas['id_bag_pemakai'];
-				$bag_pemakai=$datas['bag_pemakai'];?>
-	
-	<option value="<? echo $bag_pemakai; ?>"> <? echo $bag_pemakai; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select>
+			<option selected="selected" ></option>
+			<option value="AMBASADOR">AMBASADOR</option>
+			<option value="EFRATA">EFRATA</option>
+			<option value="GARMENT">GARMENT</option>
+			<option value="MAS">MAS</option>
+			<option value="TEXTILE">TEXTILE</option>
+		</select>						
+		Bagian Pemakai                                     
+        <select class="form-control" name='bagian' required='required'>
+			<option selected="selected"></option>
+
+			<?php
+			// Query untuk mengambil data dari tabel 'bagian_pemakai'
+			$query = "SELECT * FROM bagian_pemakai ORDER BY bag_pemakai ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($stmt !== false) {
+				while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$id_bag_pemakai = $row['id_bag_pemakai'];
+					$bag_pemakai = $row['bag_pemakai'];
+			?>
+					<option value="<?php echo $bag_pemakai; ?>">
+						<?php echo $bag_pemakai; ?>
+					</option>
+			<?php
+				}
+			} else {
+				echo "<option>Error fetching data</option>";
+			}
+			?>
+
+		</select>
 		User
 		
                                             
@@ -254,205 +375,239 @@ Nama Komputer
 	
   
    							
-	   <div class="form-group">
- <b>Monitor </b><font color=red>'00009'</font>          
-      <select class="form-control" name='monitor' >	 <option> </option>
-            
-			<?	$s1 = mysql_query("SELECT * FROM tbarang where idkategori='00009'  ");
-				if(mysql_num_rows($s1) > 0){
-			 while($datas1 = mysql_fetch_array($s1)){
-				$idbarang=$datas1['idbarang'];
-				$namabarang=$datas1['namabarang'];
-				$stock=$datas1['stock'];?>
-			 <option value="<? echo $namabarang; ?>"> <? echo $namabarang; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	<div class="form-group">
+ 		<b>Monitor </b><font color=red>'00009'</font>          
+		<select class="form-control" name='monitor'>
+			<option> </option>
+
+			<?php
+			// Query untuk mengambil data dari tabel 'tbarang' dengan idkategori '00009'
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00009'";
+			$stmt = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($stmt !== false) {
+				while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$idbarang = $row['idbarang'];
+					$namabarang = $row['namabarang'];
+					$stock = $row['stock'];
+			?>
+					<option value="<?php echo $namabarang; ?>">
+						<?php echo $namabarang; ?>
+					</option>
+			<?php
+				}
+			} else {
+				echo "<option>Error fetching data</option>";
+			}
+			?>
+
+		</select>
+
                                         
                                     
-                                        </div>
+    </div>
 										
-		   <div class="form-group">
- <b>Keyboard </b><font color=red>'00018'</font>          
-      <select class="form-control" name='keyboard' >	 <option> </option>
-            
-			<?	$s2 = mysql_query("SELECT * FROM tbarang where idkategori='00018' ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$idbarang2=$datas2['idbarang'];
-				$namabarang2=$datas2['namabarang'];
-				$stock2=$datas2['stock'];?>
-			 <option value="<? echo $namabarang2; ?>"> <? echo $namabarang2; ?>
-			 </option>
-			 
-			 <?}}?>
+	<div class="form-group">
+ 		<b>Keyboard </b><font color=red>'00018'</font>          
+     	<select class="form-control" name='keyboard' >	 
+			
+			<option> </option>
+
+			<?php
+			// Query untuk mengambil data dari tabel 'tbarang' dengan idkategori '00009'
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00018'";
+			$stmt = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($stmt !== false) {
+				while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$idbarang = $row['idbarang'];
+					$namabarang = $row['namabarang'];
+					$stock = $row['stock'];
+			?>
+					<option value="<?php echo $namabarang; ?>">
+						<?php echo $namabarang; ?>
+					</option>
+			<?php
+				}
+			} else {
+				echo "<option>Error fetching data</option>";
+			}
+			?>
 			
     
         </select> 
                                         
                                     
-                                        </div>
+    </div>
 										
  <div class="form-group">
  <b>Mouse </b><font color=red>'00019'</font>          
       <select class="form-control" name='mouse' >	 <option> </option>
             
-			<?	$s3 = mysql_query("SELECT * FROM tbarang where idkategori='00019'  ");
-				if(mysql_num_rows($s3) > 0){
-			 while($datas3 = mysql_fetch_array($s3)){
-				$idbarang3=$datas3['idbarang'];
-				$namabarang3=$datas3['namabarang'];
-				$stock3=$datas3['stock'];?>
-			 <option value="<? echo $namabarang3; ?>"> <? echo $namabarang3; ?>
-			 </option>
-			 
-			 <?}}?>
+			
+			<?php
+			// Query untuk mengambil data dari tabel 'tbarang' dengan idkategori '00009'
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00019'";
+			$stmt = sqlsrv_query($conn, $query);
+
+			// Periksa apakah query berhasil
+			if ($stmt !== false) {
+				while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$idbarang = $row['idbarang'];
+					$namabarang = $row['namabarang'];
+					$stock = $row['stock'];
+			?>
+					<option value="<?php echo $namabarang; ?>">
+						<?php echo $namabarang; ?>
+					</option>
+			<?php
+				}
+			} else {
+				echo "<option>Error fetching data</option>";
+			}
+			?>
 			
     
         </select> 
                                         
                                     
-                                        </div>										
-<b>			 Bagian Pengambilan</b>                                      
+        </div>										
+		<b>Bagian Pengambilan</b>                                      
         <select class="form-control" name='bagianambil' required='required'> <option selected="selected" ></option>
             
-			<?	$s = mysql_query("SELECT * FROM bagian order by bagian asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$idbagian=$datas['id_bagian'];
-				$bagian=$datas['bagian'];?>
-	
-	<option value="<? echo $idbagian; ?>"> <? echo $bagian; ?>
-			 </option>
-			 
-			 <?}}?>
+			
+
+			<?php
+				$query = "SELECT * FROM bagian ORDER BY bagian ASC";
+				$stmt = sqlsrv_query($conn, $query);
+
+				// Periksa apakah query berhasil
+				if ($stmt !== false) {
+					while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$idbagian = $row['id_bagian'];
+						$bagian = $row['bagian'];
+						?>
+						<option value="<?php echo $idbagian; ?>">
+							<?php echo $bagian; ?>
+						</option>
+						<?php
+					}
+				} else {
+					echo "<option>Error fetching data</option>";
+				}
+			?>
+
 			
     
-        </select>	<br>	
- <b> Keterangan</b> 
- <textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px"  ></textarea>                                    
+        </select>	
+		
+		<br>	
+ 		<b> Keterangan</b> 
+ 			<textarea cols="45" rows="7" name="keterangan" class="form-control" id="ket" size="15px"  ></textarea>                                    
         <div class="form-group">
- <b>Teknisi</b>         
-            <input   class="form-control"  type="text" name="teknisi"  >
+ 			<b>Teknisi</b>         
+            <input   class="form-control"  type="text" name="teknisi"  >                         
+        </div>                           			
+	   	<div class="form-group">
+ 			<b>Operation System</b>         
+        	<input  class="form-control"  type="text" name="os" >
                                         
                                     
-                                        </div>                           			
-	   <div class="form-group">
- <b>Operation System</b>         
-        <input  class="form-control"  type="text" name="os" >
-                                        
+    	</div>	
+		
+		
+		<div class="form-group">
+ 			<b>IP Komputer</b>         
+        	<input  class="form-control"  type="text" name="ippc" >            
                                     
-                                        </div>	
-											   <div class="form-group">
- <b>IP Komputer</b>         
-        <input  class="form-control"  type="text" name="ippc" >
-                                        
-                                    
-                                        </div>
-											   <div class="form-group">
- <b>Bulan Perawatan</b>         
-      <select class="form-control" name='bulan' >	 <option> </option>
-            
-			<?	$s2 = mysql_query("SELECT * FROM bulan  ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$id_bulan=$datas2['id_bulan'];
-				$bulan=$datas2['bulan'];
-				?>
-			 <option value="<? echo $id_bulan; ?>"> <? echo $bulan; ?>
-			 </option>
-			 
-			 <?}}?>
+        </div>
+		<div class="form-group">
+ 			<b>Bulan Perawatan</b>         
 			
-    
-        </select> 
-                               
+			<select class="form-control" name='bulan'>
+				<option> </option>
+
+				<?php
+				$query = "SELECT * FROM bulan";
+				$stmt = sqlsrv_query($conn, $query);
+
+				// Periksa apakah query berhasil
+				if ($stmt !== false) {
+					while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$id_bulan = $row['id_bulan'];
+						$bulan = $row['bulan'];
+						?>
+						<option value="<?php echo $id_bulan; ?>"><?php echo $bulan; ?></option>
+						<?php
+					}
+				} else {
+					echo "<option>Error fetching data</option>";
+				}
+				?>
+			</select>                  
                                         
                                     
-                                        </div>			
-	                                       <div class="form-group">
- <b>Total Kapasitas Harddsik</b>         
-        <input  class="form-control"  type="text" name="harddisk" >
-                                        </div>
+        </div>			
+	    <div class="form-group">
+ 			<b>Total Kapasitas Harddsik</b>         
+        	<input  class="form-control"  type="text" name="harddisk" >
+        </div>
                                     
  
 	   <div class="form-group">
- <b>Total Kapasitas RAM</b>         
-        <input  class="form-control"  type="text" name="ram" >
-                                        
-                                    
-                                        </div>
-<div class="form-group">
- <b>Model</b>         
-         <input  readonly class="form-control"  type="text" name="model" value="<? echo $model; ?>" >
-                                        
-                                    
-                                        </div>
-<div class="form-group">
- <b>Seri</b>         
-         <input  readonly class="form-control"  type="text" name="seri" value="<? echo $seri; ?>" >
-                                        
-                                    
-                                        </div>										
-  <div class="form-group">
- <b>RAM Slot 1</b>         
-         <input  readonly class="form-control"  type="text" name="ram1" value="<? echo $ram1; ?>" >
-                                        
-                                    
-                                        </div>
-  <div class="form-group">
- <b>RAM Slot 2</b>         
-          <input readonly class="form-control"  type="text" name="ram2" value="<? echo $ram2; ?>" >
-                                        
-                                    
-                                        </div>
- <div class="form-group">
- <b>Harddisk Slot 1</b>         
-        <input readonly class="form-control"  type="text" name="hd1"  value="<? echo $hd1; ?>" >
-                                        
-                                    
-                                        </div>
-  <div class="form-group">
- <b>Harddisk Slot 2</b>         
-         <input readonly class="form-control"  type="text" name="hd2" value="<? echo $hd2; ?>" >
-                                        
-                                    
-                                        </div>										
-	 <div class="form-group">
- <b>Motherboard</b>         
-         <input readonly class="form-control"  type="text" name="mobo"  value="<? echo $mobo; ?>" >
-                                        
-                                    
-                                        </div>
-   <div class="form-group">
- <b>Prosesor</b>         
-         <input readonly class="form-control"  type="text" name="prosesor"  value="<? echo $prosesor; ?>" >
-                                        
-                                    
-                                        </div>
-   <div class="form-group">
- <b>Power Supply</b>         
-          <input readonly class="form-control"  type="text" name="powersupply" value="<? echo $ps; ?>" >
-                                        
-                                    
-                                        </div>
-   <div class="form-group">
- <b>Cassing</b>         
-          <input readonly class="form-control"  type="text" name="cassing" value="<? echo $casing; ?>" >
-                                        
-                                    
-                                        </div>
-   <div class="form-group">
- <b>DVD Internal</b>         
-          <input readonly class="form-control"  type="text" name="dvd" value="<? echo $dvd; ?>" >
-                                        
-                                    
-                                        </div>
-   <input readonly class="form-control"  type="hidden" name="idpcc" value="<? echo $idpcc; ?>" >
- <button  name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
+ 			<b>Total Kapasitas RAM</b>         
+        	<input  class="form-control"  type="text" name="ram" >
+        </div>
+
+		<div class="form-group">
+ 			<b>Model</b>         
+         	<input  readonly class="form-control"  type="text" name="model" value="<?php echo $model; ?>" >		
+        </div>
+
+		<div class="form-group">
+ 			<b>Seri</b>         
+         	<input  readonly class="form-control"  type="text" name="seri" value="<?php echo $seri; ?>" >
+        </div>										
+  		<div class="form-group">
+ 			<b>RAM Slot 1</b>         
+         	<input  readonly class="form-control"  type="text" name="ram1" value="<?php echo $ram1; ?>" >
+        </div>
+  		<div class="form-group">
+ 			<b>RAM Slot 2</b>         
+          	<input readonly class="form-control"  type="text" name="ram2" value="<?php echo $ram2; ?>" >
+		</div>
+ 		<div class="form-group">
+ 			<b>Harddisk Slot 1</b>         
+        	<input readonly class="form-control"  type="text" name="hd1"  value="<?php echo $hd1; ?>" >
+        </div>
+  		<div class="form-group">
+ 			<b>Harddisk Slot 2</b>         
+         	<input readonly class="form-control"  type="text" name="hd2" value="<?php echo $hd2; ?>" >
+        </div>										
+	 	<div class="form-group">
+ 			<b>Motherboard</b>         
+         	<input readonly class="form-control"  type="text" name="mobo"  value="<?php echo $mobo; ?>" >
+        </div>
+   		<div class="form-group">
+ 			<b>Prosesor</b>         
+         	<input readonly class="form-control"  type="text" name="prosesor"  value="<?php echo $prosesor; ?>" >
+		</div>
+   		<div class="form-group">
+ 			<b>Power Supply</b>         
+          	<input readonly class="form-control"  type="text" name="powersupply" value="<?php echo $ps; ?>" >
+        </div>
+   		<div class="form-group">
+ 			<b>Cassing</b>         
+          	<input readonly class="form-control"  type="text" name="cassing" value="<?php echo $casing; ?>" >
+        </div>
+   		<div class="form-group">
+ 			<b>DVD Internal</b>         
+          	<input readonly class="form-control"  type="text" name="dvd" value="<?php echo $dvd; ?>" >
+        </div>
+   		<input readonly class="form-control"  type="hidden" name="idpcc" value="<?php echo $idpcc; ?>" >
+ 		<button  name="button_selesai" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
 
 
 									
