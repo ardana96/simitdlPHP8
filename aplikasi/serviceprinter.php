@@ -1,9 +1,12 @@
-<?include('config.php');
+<?php
+include('config.php');
 	
 ?>  
- <?$jam = date("H:i");
+<?php
+$jam = date("H:i");
 ?>
-<?$tanggal = date("d-m-20y ");
+<?php
+$tanggal = date("Y-m-d");
 ?>
 <style>
 .isi_tabelll {
@@ -55,28 +58,72 @@ document.getElementById('id_perangkat').value = string[2];
 
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
 
             <div class="inner">
@@ -128,38 +175,61 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM service where  noprinter<>'' and status='pending' ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$tgl=$data['tgl'];
-				$jam=$data['jam'];
-				$nama=$data['nama'];
-				$ippc=$data['ippc'];
-				$noprinter=$data['noprinter'];
-				$bagian=$data['bagian'];
-				$divisi=$data['divisi'];
-				$perangkat=$data['perangkat'];
-				$kasus=$data['kasus'];
-					$nomor=$data['nomor'];
-				$penerima=$data['penerima'];
+                                       <?php
+                                       
+                                       $query = "SELECT * FROM service WHERE noprinter <> '' AND status = 'pending'";
+                                       $stmt = sqlsrv_query($conn, $query);
+                                       
+                                       if ($stmt === false) {
+                                           // Tangkap error jika query gagal
+                                           $errors = sqlsrv_errors();
+                                           foreach ($errors as $error) {
+                                               echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+                                               echo "Kode Kesalahan: " . $error[0] . "<br>";
+                                               echo "Pesan Kesalahan: " . $error[2] . "<br>";
+                                           }
+                                           die("Query gagal dijalankan.");
+                                       }
+                                       
+                                       // Periksa apakah ada data yang ditemukan
+                                       if (sqlsrv_has_rows($stmt)) {
+                                           while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                               $tgl = $data['tgl'];
+                                               $jam = $data['jam'];
+                                               $nama = $data['nama'];
+                                               $bagian = $data['bagian'];
+                                               $divisi = $data['divisi'];
+                                               $noprinter = $data['noprinter'];
+                                               $status = $data['status'];
+                                                $tgl=$data['tgl'] == null ? '' : $data['tgl']->format('Y-m-d');
+                                                $jam=$data['jam'];
+                                                $nama=$data['nama'];
+                                                $ippc=$data['ippc'];
+                                                $noprinter=$data['noprinter'];
+                                                $bagian=$data['bagian'];
+                                                $divisi=$data['divisi'];
+                                                $perangkat=$data['perangkat'];
+                                                $kasus=$data['kasus'];
+                                                    $nomor=$data['nomor'];
+                                                $penerima=$data['penerima'];
 				
-				$sqlll = mysql_query("SELECT * FROM bulan where id_bulan='$bulan' ");
-			while($dataa = mysql_fetch_array($sqlll)){
-			$namabulan=$dataa['bulan'];}
+			// 	$sqlll = mysql_query("SELECT * FROM bulan where id_bulan='$bulan' ");
+			// while($dataa = mysql_fetch_array($sqlll)){
+			// $namabulan=$dataa['bulan'];}
 				?>
 				
                                         <tr class="gradeC">
-											<td><? echo $nomor ?></td>
-									<td><? echo $tgl ?></td>
-									<td><? echo $jam ?></td>
-                                            <td><? echo $nama ?></td>
-                                            <td><? echo $noprinter?></td>
-                                            <td><? echo $bagian ?></td>
+											<td><?php echo $nomor ?></td>
+									<td><?php echo $tgl ?></td>
+									<td><?php echo $jam ?></td>
+                                            <td><?php echo $nama ?></td>
+                                            <td><?php echo $noprinter?></td>
+                                            <td><?php echo $bagian ?></td>
 											
-											<td><? echo $divisi ?></td>
-											<td><? echo $perangkat ?></td>
-											<td><? echo $kasus ?></td>
-											<td><? echo $penerima ?></td>
+											<td><?php echo $divisi ?></td>
+											<td><?php echo $perangkat ?></td>
+											<td><?php echo $kasus ?></td>
+											<td><?php echo $penerima ?></td>
 								 <!--				 <td class="center">
 <a href='user.php?menu=fkerusakanprinter&nomor=<?php echo $nomor; ?>'>			
 <button  name="tombol" class="btn text-muted text-center btn-primary" type="submit">Di Dalam</button>
@@ -190,7 +260,7 @@ function kdauto($tabel, $inisial){
 											
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -213,18 +283,21 @@ function kdauto($tabel, $inisial){
                                         </div>
                                         <div class="modal-body">
                                        <form action="aplikasi/simpanserviceprinter.php" method="post"  enctype="multipart/form-data" name="postform2">
-<input type="hidden" name="nomor" id="no" class="texbox" size="25px" value="<? echo kdauto("service",""); ?>" required="required" readonly >
+<input type="hidden" name="nomor" id="no" class="texbox" size="25px" value="<?php echo kdauto("service",""); ?>" required="required" readonly >
 <input name="status" type="hidden" value="PENDING">
 			Tanggal
-                    <input  type="text" name="tgl"  value='<? echo $tanggal;?>' required="required">
-	  Jam            <input  type="text" name="jam" value='<? echo $jam;?>' required="required" ><br><br>
+                    <input  type="date" name="tgl"  value='<?php echo $tanggal;?>' required="required">
+	  Jam            <input  type="text" name="jam" value='<?php echo $jam;?>' required="required" ><br><br>
 									
-									Nama
-                                            <input class="form-control" type="text" name="nama"  required="required" >
-											Lokasi Printer
-											<div id="suggestSearch">
-<input name="barang" size='72' type="text" id="dbTxt" alt="Search Criteria" onKeyUp="searchSuggest();"  onchange="new sendRequest(this.value)"  autocomplete="off"/>
-<div  id="layer1" onclick="new permintaan(this.value)"  class="isi_tabelll" ></div></div>
+					Nama
+                    <input class="form-control" type="text" name="nama"  required="required" >
+					Lokasi Printer
+				<div id="suggestSearch">
+                    <input name="barang" size='72' type="text" id="dbTxt" alt="Search Criteria" onKeyUp="searchSuggest();"  onchange="new sendRequest(this.value)"  autocomplete="off"/>
+                    <div  id="layer1" onclick="new permintaan(this.value)"  class="isi_tabelll" >
+
+                    </div>
+                </div>
                                       ID Printer 
                                             <input class="form-control" type="text" name="ippc" id='id_perangkat' readonly >
                                     
@@ -275,8 +348,8 @@ Perangkat
 <input type="hidden" name="nomor" id="nomorganti"  class="texbox" size="25px"  required="required" readonly >
 
 			Tanggal
-                    <input  type="text" name="tgl2"  value='<? echo $tanggal;?>' required="required">
-	  Jam            <input  type="text" name="jam2" value='<? echo $jam;?>' required="required" ><br><br>
+                    <input  type="date" name="tgl2"  value='<?php echo $tanggal;?>' required="required">
+	  Jam            <input  type="text" name="jam2" value='<?php echo $jam;?>' required="required" ><br><br>
 									
 
 Teknisi 
@@ -318,8 +391,8 @@ Keterangan
 <input type="hidden" name="nomor" id="nomoroke"  class="texbox" size="25px"  required="required" readonly >
 
 			Tanggal
-                    <input  type="text" name="tgl2"  value='<? echo $tanggal;?>' required="required">
-	  Jam            <input  type="text" name="jam2" value='<? echo $jam;?>' required="required" ><br><br>
+                    <input  type="date" name="tgl2"  value='<?php echo $tanggal;?>' required="required">
+	  Jam            <input  type="text" name="jam2" value='<?php echo $jam;?>' required="required" ><br><br>
 									
 
 Dikirim Ke 

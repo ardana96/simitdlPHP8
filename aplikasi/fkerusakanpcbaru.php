@@ -54,71 +54,90 @@ document.getElementById('www2').value = string[0];
 
 </script>
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('config.php');
 ?>
-<?
-	if(isset($_GET['nomor'])){
-$nomor=$_GET['nomor'];
-$tdk=$_GET['tindakan'];
-$teknisi=$_GET['teknisi'];
 
-$lihat=mysql_query("select * from service where nomor='$nomor'");
-  while($result=mysql_fetch_array($lihat)){
-	  $nomorkasus=$result['nomor'];
-	  $tglkasus=$result['tgl'];
-	  $jamkasus=$result['jam'];
-	  $nama=$result['nama'];
-	  $bagian=$result['bagian'];
-	  $divisi=$result['divisi'];
-	  $perangkat=$result['perangkat'];
-	  $kasus=$result['kasus'];
-	  $ippckasus=$result['ippc'];
+<?php
+$tglkasus='';
+$jamkasus='';
+if (isset($_GET['nomor'])) {
+    $nomor = $_GET['nomor'];
+    // $tdk = $_GET['tindakan'];
+    // $teknisi = $_GET['teknisi'];
 
-$sqlll = mysql_query("SELECT * FROM pcaktif where  pcaktif.ippc='$ippckasus' OR pcaktif.idpc LIKE '%".$ippckasus."%' ");
-		while($dataa = mysql_fetch_array($sqlll)){
-			$nomorpc=$dataa['nomor'];
-			$userpc=$dataa['user'];
-			$divisipc=$dataa['divisi'];
-			$bagianpc=$dataa['bagian'];
-			$idpc=$dataa['idpc'];
-			$namapc=$dataa['namapc'];
-			$ospc=$dataa['os'];
-			$bulanpc=$dataa['bulan'];
-			$prosesorpc=$dataa['prosesor'];
-			$mobopc=$dataa['mobo'];
-			$monitorpc=$dataa['monitor'];
-			$rampc=$dataa['ram'];
-			$harddiskpc=$dataa['harddisk'];
-			$jumlahpc=$dataa['jumlah'];
-			$ram1pc=$dataa['ram1'];
-			$ram2pc=$dataa['ram2'];
-			$hd1pc=$dataa['hd1'];
-			$hd2pc=$dataa['hd2'];
-			$ippcpc=$dataa['ippc'];
-			$userpc=$dataa['user'];
-			$powersuplypc=$dataa['powersuply'];
-			$cassingpc=$dataa['cassing'];
-			$tglmasukc=$dataa['tglmasuk'];
-			$dvdpc=$dataa['dvd'];
-			$model=$dataa['model'];
-	$sbulan = mysql_query("SELECT * FROM bulan where  id_bulan='$bulanpc' ");
-		while($databulan = mysql_fetch_array($sbulan)){
-		$bulannama=$databulan['bulan'];
-		}
-			}
-	}}	  
+    // Query untuk mendapatkan data dari tabel service
+    $query_service = "SELECT * FROM service WHERE nomor = ?";
+    $params_service = array($nomor);
+    $stmt_service = sqlsrv_query($conn, $query_service, $params_service);
 
+    if ($stmt_service === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
 
+    while ($result = sqlsrv_fetch_array($stmt_service, SQLSRV_FETCH_ASSOC)) {
+        $nomorkasus = $result['nomor'];
+        $tglkasus = $result['tgl'];
+        $jamkasus = $result['jam'];
+        $nama = $result['nama'];
+        $bagian = $result['bagian'];
+        $divisi = $result['divisi'];
+        $perangkat = $result['perangkat'];
+        $kasus = $result['kasus'];
+        $ippckasus = $result['ippc'];
+
+        // Query untuk mendapatkan data dari tabel pcaktif
+        $query_pcaktif = "SELECT * FROM pcaktif WHERE ippc = ? OR idpc LIKE ?";
+        $params_pcaktif = array($ippckasus, '%' . $ippckasus . '%');
+        $stmt_pcaktif = sqlsrv_query($conn, $query_pcaktif, $params_pcaktif);
+
+        if ($stmt_pcaktif === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        while ($dataa = sqlsrv_fetch_array($stmt_pcaktif, SQLSRV_FETCH_ASSOC)) {
+            $nomorpc = $dataa['nomor'];
+            $userpc = $dataa['user'];
+            $divisipc = $dataa['divisi'];
+            $bagianpc = $dataa['bagian'];
+            $idpc = $dataa['idpc'];
+            $namapc = $dataa['namapc'];
+            $ospc = $dataa['os'];
+            $bulanpc = $dataa['bulan'];
+            $prosesorpc = $dataa['prosesor'];
+            $mobopc = $dataa['mobo'];
+            $monitorpc = $dataa['monitor'];
+            $rampc = $dataa['ram'];
+            $harddiskpc = $dataa['harddisk'];
+            $jumlahpc = $dataa['jumlah'];
+            $ram1pc = $dataa['ram1'];
+            $ram2pc = $dataa['ram2'];
+            $hd1pc = $dataa['hd1'];
+            $hd2pc = $dataa['hd2'];
+            $ippcpc = $dataa['ippc'];
+            $powersuplypc = $dataa['powersuply'];
+            $cassingpc = $dataa['cassing'];
+            //$tglmasukc = $dataa['tglmasuk'];
+            $dvdpc = $dataa['dvd'];
+            $model = $dataa['model'];
+
+            // Query untuk mendapatkan nama bulan
+            $query_bulan = "SELECT * FROM bulan WHERE id_bulan = ?";
+            $params_bulan = array($bulanpc);
+            $stmt_bulan = sqlsrv_query($conn, $query_bulan, $params_bulan);
+
+            if ($stmt_bulan === false) {
+                die(print_r(sqlsrv_errors(), true));
+            }
+
+            while ($databulan = sqlsrv_fetch_array($stmt_bulan, SQLSRV_FETCH_ASSOC)) {
+                $bulannama = $databulan['bulan'];
+            }
+        }
+    }
+}
 ?>
+
+
 
 
 <script language="JavaScript" type="text/javascript" src="suggest.js"></script>
@@ -129,63 +148,127 @@ border:1px;
 	background-color: #FFF;}
 </style>
 
-<?
+<?php
 $datee=date('20y-m-d');
  $jam = date("H:i");
 $date=date('ymd');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
 $no_faktur=kdauto("tpengambilan",'');
 $nofakturbeli=kdauto("tpembelian",'');
-$dd=mysql_query("select * from trincipengambilan where nofaktur='$no_faktur' and sesi='USR' ");
-if(mysql_num_rows($dd) > 0){
-$keadaan='aktif';
+$query = "SELECT * FROM trincipengambilan WHERE nofaktur = ? AND sesi = ?";
+$params = array($no_faktur, 'USR');
+$stmt = sqlsrv_query($conn, $query, $params);
+
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+if (sqlsrv_has_rows($stmt)) {
+    $keadaan = 'aktif';
+} else {
+    $keadaan = 'nonaktif';
 }
 ?>
 
 <?php
-$query_rinci_jual="SELECT *,sum(jumlah) as jum FROM trincipengambilan WHERE nofaktur='".$no_faktur."' group by idbarang";
-$get_hitung_rinci=mysql_query($query_rinci_jual);
-$hitung=mysql_num_rows($get_hitung_rinci);
-$total_jual=0; $total_item=0;
-while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
-$jml=$hitung_total['jumlah'];
-$sub_total=$hitung_total['sub_total_jual'];
-$total_jual=$sub_total+$total_jual;
-$total_item=$jml+$total_item;}
+
+$query_rinci_jual = "SELECT  SUM(jumlah) as jum FROM trincipengambilan WHERE nofaktur = ? GROUP BY idbarang";
+$params = array($no_faktur);
+$stmt = sqlsrv_query($conn, $query_rinci_jual, $params);
+
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+$total_jual = 0;
+$total_item = 0;
+
+while ($hitung_total = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $jml = $hitung_total['jumlah'];
+    // $sub_total = $hitung_total['sub_total_jual']; // Pastikan kolom ini benar-benar ada di database Anda.
+    // $total_jual += $sub_total;
+    $total_item += $jml;
+}
+
+
 ?>
 
 
 <?php
-$query_rinci_beli="SELECT *,sum(jumlah) as jum FROM trincipembelian WHERE nofaktur='".$no_faktur."' group by idbarang";
-$get_hitung_beli=mysql_query($query_rinci_beli);
-$hitungbeli=mysql_num_rows($get_hitung_beli);
-$total_beli=0; $total_beli=0;
-while($hitung_beli=mysql_fetch_array($get_hitung_beli)){
-$jmlbeli=$hitung_beli['jumlah'];
-$sub_totalbeli=$hitung_beli['sub_total_beli'];
-$total_beli=$sub_totalbeli+$total_beli;
-$total_item=$jmlbeli+$total_item;}
+// $query_rinci_beli="SELECT *,sum(jumlah) as jum FROM trincipembelian WHERE nofaktur='".$no_faktur."' group by idbarang";
+// $get_hitung_beli=mysql_query($query_rinci_beli);
+// $hitungbeli=mysql_num_rows($get_hitung_beli);
+// $total_beli=0; $total_beli=0;
+// while($hitung_beli=mysql_fetch_array($get_hitung_beli)){
+// $jmlbeli=$hitung_beli['jumlah'];
+// $sub_totalbeli=$hitung_beli['sub_total_beli'];
+// $total_beli=$sub_totalbeli+$total_beli;
+// $total_item=$jmlbeli+$total_item;}
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -263,7 +346,7 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 </head>
 
 <body onload="document.getElementById('kd_barang').focus()">
-<?if($keadaan<>'aktif'){?>
+<?php if($keadaan<>'aktif'){ ?>
 <h4 align='center'>UPDATE KERUSAKAN PC</h4>
 
 <form action="aplikasi/simpanrincikeluarservice.php" method="post" >
@@ -274,15 +357,15 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 <font color='blue'>PERMINTAAN SERVICE </font><br>
  Tanggal &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp Jam
 	<br>	                                    
-   <input   type="text" size='10' name="TglKasus" value="<? echo $tglkasus; ?>" readonly> 
-   <input   type="text" size='10' name="JamKasus" value="<? echo $jamkasus; ?>" readonly><br>
+   <input   type="text" size='10' name="TglKasus" value="<?php echo $tglkasus->format('Y-m-d'); ?>" readonly> 
+   <input   type="text" size='10' name="JamKasus" value="<?php echo $jamkasus; ?>" readonly><br>
      
 Nama / Bagian / Divisi
-<input type="text" name="namakasus" id="nama" class="form-control" value="<? echo $nama.'/'.$bagian.'/'.$divisi; ?>"  readonly  >
+<input type="text" name="namakasus" id="nama" class="form-control" value="<?php echo $nama.'/'.$bagian.'/'.$divisi; ?>"  readonly  >
 Permasalahan
-<input type="text" name="kasuskasus" id="kasus" class="form-control" value="<? echo $kasus; ?>"  readonly  > 
+<input type="text" name="kasuskasus" id="kasus" class="form-control" value="<?php echo $kasus; ?>"  readonly  > 
 IP PC
-<input type="text" name="ippckasus" id="ippckasus" class="form-control" value="<? echo $ippckasus; ?>"  readonly  >     
+<input type="text" name="ippckasus" id="ippckasus" class="form-control" value="<?php echo $ippckasus; ?>"  readonly  >     
 
     
     </div>
@@ -361,8 +444,19 @@ IP PC
 										
                                         </tr>
 										  <?php
-$rinci_jual=mysql_query($query_rinci_jual);
-while( $data_rinci=mysql_fetch_array($rinci_jual)){
+// $rinci_jual=mysql_query($query_rinci_jual);
+// while( $data_rinci=mysql_fetch_array($rinci_jual)){
+
+	$rinci_jual = sqlsrv_query($conn, $query_rinci_jual, $params);
+
+	if ($stmt === false) {
+		die(print_r(sqlsrv_errors(), true));
+	}
+	
+	$total_jual = 0;
+	$total_item = 0;
+	
+	while ($data_rinci = sqlsrv_fetch_array($rinci_jual, SQLSRV_FETCH_ASSOC)) {
 $idbarang=$data_rinci['idbarang'];
 $namabarang=$data_rinci['namabarang'];
 $jumlah=$data_rinci['jumlah'];
@@ -472,13 +566,21 @@ $jum=$data_rinci['jum'];
 										
                                         </tr>
 										  <?php
-$rinci_beli=mysql_query("SELECT *,sum(jumlah) as jum FROM trincipembelian WHERE nofaktur='".$nofakturbeli."' group by idbarang");
-while( $data_beli=mysql_fetch_array($rinci_beli)){
+$query_rinci_beli = "SELECT MAX(idbarang) as idbarang, MAX(namabarang) as namabarang,  SUM(jumlah) as jum FROM trincipembelian WHERE nofaktur = ? GROUP BY idbarang";
+$rinci_beli = sqlsrv_query($conn, $query_rinci_beli, $params);
+
+if ($rinci_beli === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+while ($data_beli = sqlsrv_fetch_array($rinci_beli, SQLSRV_FETCH_ASSOC)) {
+
+
 $idbarangbeli=$data_beli['idbarang'];
 $namabarangbeli=$data_beli['namabarang'];
-$jumlahbeli=$data_beli['jumlah'];
+//$jumlahbeli=$data_beli['jumlah'];
 $jumbeli=$data_beli['jum'];
-$total_itembeli=$total_itembeli+$jumbeli;
+$total_itembeli =+ $jumbeli;
  
   ?>
   <tr class="tr_isi">
@@ -525,8 +627,8 @@ $total_itembeli=$total_itembeli+$jumbeli;
 
   Tanggal &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp Jam
 	<br>	                                    
-   <input   type="text" size='10' name="TglPerbaikan" value="<? echo date('d-m-20y'); ?>" > 
-   <input   type="text" size='10' name="JamPerbaikan" value="<? echo date("H:i"); ?>" >
+   <input   type="text" size='10' name="TglPerbaikan" value="<?php echo date('d-m-20y'); ?>" > 
+   <input   type="text" size='10' name="JamPerbaikan" value="<?php echo date("H:i"); ?>" >
    <br>
 Status Service / Update                                    
        <select class="form-control" name="statup" required='required'>
@@ -545,55 +647,73 @@ Kategori
         <select class="form-control" name='noper' >
              <option selected="selected" ></option>
 			
-			<?	$sss = mysql_query("SELECT * FROM permintaan where status<>'selesai' order by nama ");
-				if(mysql_num_rows($sss) > 0){
-			 while($datasss = mysql_fetch_array($sss)){
-				$nomor=$datasss['nomor'];
-				$bagian=$datasss['bagian'];
-				$nama=$datasss['nama'];
-				$namabarang=$datasss['namabarang'];
-				$divisi=$datasss['divisi'];?>
-			 <option value="<? echo $nomor; ?>"> <? echo $nama.'    /    '.$bagian.'    /    '.$divisi.'    /    '.$namabarang; ?>
-			 </option> 
-			 
-			 <?}}?>
-			
+			 <?php
+				$query = "SELECT * FROM permintaan WHERE status <> 'selesai' ORDER BY nama";
+				$sss = sqlsrv_query($conn, $query);
+
+				if ($sss === false) {
+					die(print_r(sqlsrv_errors(), true));
+				}
+
+				if (sqlsrv_has_rows($sss)) {
+					while ($datasss = sqlsrv_fetch_array($sss, SQLSRV_FETCH_ASSOC)) {
+						$nomor = $datasss['nomor'];
+						$bagian = $datasss['bagian'];
+						$nama = $datasss['nama'];
+						$namabarang = $datasss['namabarang'];
+						$divisi = $datasss['divisi'];
+						?>
+						<option value="<?php echo $nomor; ?>">
+							<?php echo $nama . '    /    ' . $bagian . '    /    ' . $divisi . '    /    ' . $namabarang; ?>
+						</option>
+						<?php
+					}
+				}
+				?>
     
         </select>
 Teknisi 
-<input type="text" name="TeknisiPerbaikan" id="teknisi" value="<? echo $teknisi; ?>" class="form-control" size="25px" placeholder="" required="required"  >
+<input type="text" name="TeknisiPerbaikan" id="teknisi" class="form-control" size="25px" placeholder="" required="required"  >
  Tindakan
 
-  <textarea cols="45" rows="7" name="TindakanPerbaikan" class="form-control" id="tindakan" size="15px" placeholder="" required="required"><? echo $tdk; ?></textarea> 
+  <textarea cols="45" rows="7" name="TindakanPerbaikan" class="form-control" id="tindakan" size="15px" placeholder="" required="required"></textarea> 
 <input class="form-control" name="nofaktur" type="hidden" id="no_faktur" value="<?php echo $no_faktur; ?>" size="16" readonly="readonly" />
 	<input class="form-control" name="bagian" type="hidden" id="bagian" value="<?php echo $bagian; ?>" size="16" readonly="readonly" />
-<input type="hidden" name="nomorkasus" id="nomorkasus" value="<? echo $nomorkasus; ?>"  >
+<input type="hidden" name="nomorkasus" id="nomorkasus" value="<?php echo $nomorkasus; ?>"  >
 Keterangan  
  <textarea cols="45" rows="7" name="keterangan" class="form-control" id="keterangan" size="15px" placeholder="" ></textarea>                              
                   
 					<font color='blue'>UPDATE SPESIFIKASI KOMPUTER </font><br>
  Bagian Pengambilan Barang                                     
-        <select class="form-control" name='bagianambil' required='required'>
-         <option></option>   
-			<?	$s = mysql_query("SELECT * FROM bagian order by bagian asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$id_bagianambil=$datas['id_bagian'];
-				$bagianambil=$datas['bagian'];?>
-	
-	<option value="<? echo $id_bagianambil; ?>"> <? echo $bagianambil; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select>
+ <select class="form-control" name='bagianambil' required='required'>
+    <option></option>
+    <?php
+    $query = "SELECT * FROM bagian ORDER BY bagian ASC";
+    $s = sqlsrv_query($conn, $query);
+
+    if ($s === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    if (sqlsrv_has_rows($s)) {
+        while ($datas = sqlsrv_fetch_array($s, SQLSRV_FETCH_ASSOC)) {
+            $id_bagianambil = $datas['id_bagian'];
+            $bagianambil = $datas['bagian'];
+            ?>
+            <option value="<?php echo $id_bagianambil; ?>"> <?php echo $bagianambil; ?>
+            </option>
+            <?php
+        }
+    }
+    ?>
+</select>
+
 								
          
 
    		Divisi                                    
        <select class="form-control" name="divisiup" required='required'>
- <option value=<? echo $divisipc; ?> ><? echo $divisipc; ?></option>
+ <option value=<?php echo $divisipc; ?> ><?php echo $divisipc; ?></option>
  <option value="AMBASADOR">AMBASADOR</option>
  <option value="EFRATA">EFRATA</option>
  <option value="GARMENT">GARMENT</option>
@@ -601,41 +721,47 @@ Keterangan
  <option value="TEXTILE">TEXTILE</option>
 </select>											
  Bagian Pemakai                                     
-        <select class="form-control" name='bagianup' required='required'>
-		<option value=<? echo $bagianpc; ?> ><? echo $bagianpc; ?></option>
-            
-			<?	$s = mysql_query("SELECT * FROM bagian_pemakai order by bag_pemakai asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$id_bag_pemakai=$datas['id_bag_pemakai'];
-				$bag_pemakai=$datas['bag_pemakai'];?>
-	
-	<option value="<? echo $bag_pemakai; ?>"> <? echo $bag_pemakai; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select>
+ <select class="form-control" name='bagianup' required='required'>
+    <option value="<?php echo $bagianpc; ?>"><?php echo $bagianpc; ?></option>
+    <?php
+    $query = "SELECT * FROM bagian_pemakai ORDER BY bag_pemakai ASC";
+    $s = sqlsrv_query($conn, $query);
+
+    if ($s === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    if (sqlsrv_has_rows($s)) {
+        while ($datas = sqlsrv_fetch_array($s, SQLSRV_FETCH_ASSOC)) {
+            $id_bag_pemakai = $datas['id_bag_pemakai'];
+            $bag_pemakai = $datas['bag_pemakai'];
+            ?>
+            <option value="<?php echo $bag_pemakai; ?>"> <?php echo $bag_pemakai; ?></option>
+            <?php
+        }
+    }
+    ?>
+</select>
+
 		User
 		
                                             
-                                            <input  class="form-control"  type="text" name="userup" value="<? echo $userpc; ?>">
+                                            <input  class="form-control"  type="text" name="userup" value="<?php echo $userpc; ?>">
                                     
  ID Komputer
 		
                                             
-                                            <input  class="form-control"  type="text" name="idpcup" value="<? echo $idpc; ?>" >
+                                            <input  class="form-control"  type="text" name="idpcup" value="<?php echo $idpc; ?>" >
                                            
 Nama Komputer
 		
                                             
-                                            <input  class="form-control"  type="text" name="namapcup" value="<? echo $namapc; ?>">   
+                                            <input  class="form-control"  type="text" name="namapcup" value="<?php echo $namapc; ?>">   
                                     
 	
 	   <div class="form-group">
  <b>Monitor </b>      
-           <input  class="form-control"  type="text" name="monitorup" value="<? echo $monitorpc; ?>" >
+           <input  class="form-control"  type="text" name="monitorup" value="<?php echo $monitorpc; ?>" >
                                         
                                     
                                         </div>
@@ -647,47 +773,54 @@ Nama Komputer
 </select>
 	   <div class="form-group">
  <b>Operation System</b>         
-        <input  class="form-control"  type="text" name="osup" value="<? echo $ospc; ?>" >
+        <input  class="form-control"  type="text" name="osup" value="<?php echo $ospc; ?>" >
                                         
                                     
                                         </div>	
 											   <div class="form-group">
  <b>IP Komputer</b>         
-        <input    class="form-control"  type="text" name="ippcup"  value="<? echo $ippcpc; ?>">
+        <input    class="form-control"  type="text" name="ippcup"  value="<?php echo $ippcpc; ?>">
                                         
                                     
                                         </div>
 						
 	                                       <div class="form-group">
  <b>Total Kapasitas Harddsik</b>         
-        <input  class="form-control"  type="text" name="harddiskup" value="<? echo $harddiskpc; ?>">
+        <input  class="form-control"  type="text" name="harddiskup" value="<?php echo $harddiskpc; ?>">
                                         </div>
                                     
  
 	   <div class="form-group">
  <b>Total Kapasitas RAM</b>         
-        <input   class="form-control"  type="text" name="ramup" value="<? echo $rampc; ?>">
+        <input   class="form-control"  type="text" name="ramup" value="<?php echo $rampc; ?>">
                                         
                                     
                                         </div>		
 
   <div class="form-group">
  <b>RAM Slot 1</b><font color=red>Tidak mengurangi Stock</font>          
-      <select class="form-control" name='ram1up' >
-	  <option value="<? echo $ram1pc; ?>"> <? echo $ram1pc; ?></option>
-            
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+ <select class="form-control" name='ram1up'>
+    <option value="<?php echo $ram1pc; ?>"> <?php echo $ram1pc; ?></option>
+    <?php
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00006'";
+    $s6 = sqlsrv_query($conn, $query);
+
+    if ($s6 === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    if (sqlsrv_has_rows($s6)) {
+        while ($datas6 = sqlsrv_fetch_array($s6, SQLSRV_FETCH_ASSOC)) {
+            $idbarang6 = $datas6['idbarang'];
+            $namabarang6 = $datas6['namabarang'];
+            ?>
+            <option value="<?php echo $namabarang6; ?>"> <?php echo $namabarang6; ?></option>
+            <?php
+        }
+    }
+    ?>
+</select>
+
                                         
                                     
                                         </div>
@@ -698,18 +831,25 @@ Nama Komputer
       <select class="form-control" name='ram2up' >
 	  <option value="<? echo $ram2pc; ?>" ><? echo $ram2pc; ?> </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+	  <?php
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00006'";
+    $s6 = sqlsrv_query($conn, $query);
+
+    if ($s6 === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    if (sqlsrv_has_rows($s6)) {
+        while ($datas6 = sqlsrv_fetch_array($s6, SQLSRV_FETCH_ASSOC)) {
+            $idbarang6 = $datas6['idbarang'];
+            $namabarang6 = $datas6['namabarang'];
+            ?>
+            <option value="<?php echo $namabarang6; ?>"> <?php echo $namabarang6; ?></option>
+            <?php
+        }
+    }
+    ?>
+</select>
                                         
                                     
                                         </div>
@@ -717,21 +857,28 @@ Nama Komputer
 										
    <div class="form-group">
  <b>Harddisk Slot 1</b><font color=red>Tidak mengurangi Stock</font>           
-      <select class="form-control" name='hd1up' >
-	  <option value="<? echo $hd1pc; ?>"><? echo $hd1pc; ?> </option>
-            
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' ");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $namabarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select> 
+ <select class="form-control" name='hd1up'>
+    <option value="<?php echo $hd1pc; ?>"><?php echo $hd1pc; ?></option>
+    <?php
+    $query = "SELECT * FROM tbarang WHERE idkategori = '00005'";
+    $s5 = sqlsrv_query($conn, $query);
+
+    if ($s5 === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    if (sqlsrv_has_rows($s5)) {
+        while ($datas5 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+            $idbarang5 = $datas5['idbarang'];
+            $namabarang5 = $datas5['namabarang'];
+            ?>
+            <option value="<?php echo $namabarang5; ?>"><?php echo $namabarang5; ?></option>
+            <?php
+        }
+    }
+    ?>
+</select>
+
                                         
                                     
                                         </div>
@@ -742,15 +889,24 @@ Nama Komputer
       <select class="form-control" name='hd2up' >
 	  <option value="<? echo $hd2pc; ?>" ><? echo $hd2pc; ?> </option>
             
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' ");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $namabarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
+	<?php
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00005'";
+		$s5 = sqlsrv_query($conn, $query);
+
+		if ($s5 === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		if (sqlsrv_has_rows($s5)) {
+			while ($datas5 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang5 = $datas5['idbarang'];
+				$namabarang5 = $datas5['namabarang'];
+				?>
+				<option value="<?php echo $namabarang5; ?>"><?php echo $namabarang5; ?></option>
+				<?php
+			}
+		}
+    ?>
 			
     
         </select> 
@@ -763,16 +919,24 @@ Nama Komputer
       <select class="form-control" name='moboup' >	
 	  <option value="<? echo $mobopc; ?>"><? echo $mobopc; ?> </option>
             
-			<?	$s1 = mysql_query("SELECT * FROM tbarang where idkategori='00001'  ");
-				if(mysql_num_rows($s1) > 0){
-			 while($datas1 = mysql_fetch_array($s1)){
-				$idbarang=$datas1['idbarang'];
-				$namabarang=$datas1['namabarang'];
-				$stock=$datas1['stock'];?>
-			 <option value="<? echo $namabarang; ?>"> <? echo $namabarang; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00001'";
+		$s5 = sqlsrv_query($conn, $query);
+
+		if ($s5 === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		if (sqlsrv_has_rows($s5)) {
+			while ($datas5 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang5 = $datas5['idbarang'];
+				$namabarang5 = $datas5['namabarang'];
+				?>
+				<option value="<?php echo $namabarang5; ?>"><?php echo $namabarang5; ?></option>
+				<?php
+			}
+		}
+    ?>
 			
     
         </select> 
@@ -785,15 +949,24 @@ Nama Komputer
       <select class="form-control" name='prosesorup'>
 	  <option value="<? echo $prosesorpc; ?>"><? echo $prosesorpc; ?> </option>
             
-			<?	$s2 = mysql_query("SELECT * FROM tbarang where idkategori='00002' ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$idbarang2=$datas2['idbarang'];
-				$namabarang2=$datas2['namabarang'];?>
-			 <option value="<? echo $namabarang2; ?>"> <? echo $namabarang2; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00002'";
+		$s5 = sqlsrv_query($conn, $query);
+
+		if ($s5 === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		if (sqlsrv_has_rows($s5)) {
+			while ($datas5 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang5 = $datas5['idbarang'];
+				$namabarang5 = $datas5['namabarang'];
+				?>
+				<option value="<?php echo $namabarang5; ?>"><?php echo $namabarang5; ?></option>
+				<?php
+			}
+		}
+    ?>
 			
     
         </select> 
@@ -806,15 +979,24 @@ Nama Komputer
       <select class="form-control" name='powersuplyup'>
 	  <option value="<? echo $powersuplypc; ?>"><? echo $powersuplypc; ?> </option>
             
-			<?	$s3 = mysql_query("SELECT * FROM tbarang where idkategori='00003' ");
-				if(mysql_num_rows($s3) > 0){
-			 while($datas3 = mysql_fetch_array($s3)){
-				$idbarang3=$datas3['idbarang'];
-				$namabarang3=$datas3['namabarang'];?>
-			 <option value="<? echo $namabarang3; ?>"> <? echo $namabarang3; ?>
-			 </option>
-			 
-			 <?}}?>
+			<?php
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00003'";
+		$s5 = sqlsrv_query($conn, $query);
+
+		if ($s5 === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		if (sqlsrv_has_rows($s5)) {
+			while ($datas3 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+				?>
+				<option value="<?php echo $namabarang3; ?>"><?php echo $namabarang3; ?></option>
+				<?php
+			}
+		}
+    ?>
 			
     
         </select> 
@@ -827,15 +1009,24 @@ Nama Komputer
       <select class="form-control" name='cassingup' >
 	  <option value="<? echo $cassingpc; ?>"><? echo $cassingpc; ?> </option>
             
-			<?	$s4 = mysql_query("SELECT * FROM tbarang where idkategori='00004'  ");
-				if(mysql_num_rows($s4) > 0){
-			 while($datas4 = mysql_fetch_array($s4)){
-				$idbarang4=$datas4['idbarang'];
-				$namabarang4=$datas4['namabarang'];?>
-			 <option value="<? echo $namabarang4; ?>"> <? echo $namabarang4; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00004'";
+		$s5 = sqlsrv_query($conn, $query);
+
+		if ($s5 === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		if (sqlsrv_has_rows($s5)) {
+			while ($datas4 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang4 = $datas4['idbarang'];
+				$namabarang4 = $datas4['namabarang'];
+				?>
+				<option value="<?php echo $namabarang4; ?>"><?php echo $namabarang4; ?></option>
+				<?php
+			}
+		}
+    ?>
 			
     
         </select> 
@@ -848,15 +1039,24 @@ Nama Komputer
       <select class="form-control" name='dvdup' >
 	  <option value="<? echo $dvdpc; ?>" ><? echo $dvdpc; ?> </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00008' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00008'";
+		$s5 = sqlsrv_query($conn, $query);
+
+		if ($s5 === false) {
+			die(print_r(sqlsrv_errors(), true));
+		}
+
+		if (sqlsrv_has_rows($s5)) {
+			while ($datas3 = sqlsrv_fetch_array($s5, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+				?>
+				<option value="<?php echo $namabarang3; ?>"><?php echo $namabarang3; ?></option>
+				<?php
+			}
+		}
+    ?>
 			
     
         </select> 
@@ -865,11 +1065,11 @@ Nama Komputer
                                         </div>
 										 <div class="form-group">
  Bulan Perawatan         
-      <input readonly class="form-control"  type="text" name="bulanup" value="<? echo $bulannama; ?>" >    
+      <input readonly class="form-control"  type="text" name="bulanup" value="<?php echo $bulannama; ?>" >    
                                         
                                     
                                         </div>	
-   <input  class="form-control"  type="hidden" name="nomorup" value="<? echo $nomorpc; ?>" >
+   <input  class="form-control"  type="hidden" name="nomorup" value="<?php echo $nomorpc; ?>" >
    
    <input type="hidden" name="nofakturbeli" value=<?php echo $nofakturbeli; ?> />	
    
@@ -893,34 +1093,34 @@ Nama Komputer
 </div>
   
   
-  <?}else{?>
+  <?php } else { ?>
 
 
-  <div class="col-lg-12">
-    <ul class="pricing-table" >
+	<div class="col-lg-12">
+		<ul class="pricing-table" >
 
-	<li class="active danger col-lg-4">
-	<h4>MOHON MAAF</h4>
-		<h4>Silahkan tunggu sebentar </h4>
-	<h4>halaman masih digunakan user</h4>
-	<h4>halaman akan automatis REFRESH</h4>
-	<h4>klik menu pengambilan kembali </h4>
-	<h4>Setelah REFRESH</h4>
-		
-		
-		<div class="footer">
-			<font color='black'>TERIMA KASIH ATAS WAKTU YANG TELAH DIBERIKAN</font>
-		</div>
-	</li>
+		<li class="active danger col-lg-4">
+		<h4>MOHON MAAF</h4>
+			<h4>Silahkan tunggu sebentar </h4>
+		<h4>halaman masih digunakan user</h4>
+		<h4>halaman akan automatis REFRESH</h4>
+		<h4>klik menu pengambilan kembali </h4>
+		<h4>Setelah REFRESH</h4>
+			
+			
+			<div class="footer">
+				<font color='black'>TERIMA KASIH ATAS WAKTU YANG TELAH DIBERIKAN</font>
+			</div>
+		</li>
 
-        	
-</ul>
+				
+	</ul>
 
-  </div>
-</div>
- <br /><br />    <br />                                   
-<meta http-equiv=refresh content=60;url='pemakai.php?menu=home'>
-<?}?>
+	</div>
+	</div>
+	<br /><br />    <br />                                   
+	<meta http-equiv=refresh content=60;url='pemakai.php?menu=home'>
+	<?php } ?>
 </body>
 </html>
 <iframe width=174 height=189 name="gToday:normal:calender/agenda.js" id="gToday:normal:calender/agenda.js" src="calender/ipopeng.htm" scrolling="no" frameborder="0" style="visibility:visible; z-index:999; position:absolute; top:-500px; left:-500px;">

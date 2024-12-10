@@ -1,11 +1,14 @@
-<?include('config.php');
+<?php
+include('config.php');
 	date_default_timezone_set("Asia/Jakarta");
-$tglini=date("d-m-20y");
+$tglini=date("Y-m-d");
 $jamini=date("H:i");
 ?>  
- <?$jam = date("H:i");
+<?php 
+  $jam = date("H:i");
 ?>
-<?$tanggal = date("d-m-20y ");
+<?php
+	$tanggal = date("d-m-20y ");
 ?>
 <script language="javascript">
 function createRequestObject() {
@@ -31,28 +34,72 @@ document.getElementById('noedit').value = encodeURIComponent(nomor);
 
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
 
             <div class="inner">
@@ -100,54 +147,84 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$nou=1;
-									   $sql = mysql_query("SELECT * FROM software order by nomor desc ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$tgl=$data['tgl'];
+                                       <?php
+				$nou = 1;
+
+				// Query untuk mengambil data dari tabel "software"
+				$sql = "SELECT * FROM software ORDER BY nomor DESC";
+				$stmt = sqlsrv_query($conn, $sql);
+				
+				if ($stmt === false) {
+					echo "Error in query execution.<br>";
+					if (($errors = sqlsrv_errors()) != null) {
+						foreach ($errors as $error) {
+							echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+							echo "Code: " . $error['code'] . "<br>";
+							echo "Message: " . $error['message'] . "<br>";
+						}
+					}
+				} else {
+					while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+				$tgl=$data['tgl'] ? $data['tgl']->format('Y-m-d') : '';
 				$jam=$data['jam'];
 				$nama=$data['nama'];
 				$bagian=$data['bagian'];
 				$divisi=$data['divisi'];
 				$kasus=$data['kasus'];
-					$nomor=$data['nomor'];
+				$nomor=$data['nomor'];
 				$penerima=$data['penerima'];
-					$status=$data['status'];
-						$tindakan=$data['tindakan'];
-						$tgl2=$data['tgl2'];
-						$jam2=$data['jam2'];
-												$cetak=$data['cetak'];
+				$status=$data['status'];
+				$tindakan=$data['tindakan'];
+				$tgl2=$data['tgl2'] ? $data['tgl2']->format('Y-m-d') : '';
+				$jam2=$data['jam2'];
+				$cetak=$data['cetak'];
 
 
 						
 				
-				$sqlll = mysql_query("SELECT * FROM divisi where kd='$divisi' ");
-			while($dataa = mysql_fetch_array($sqlll)){
-			$namadivisi=$dataa['namadivisi'];}
+				$sql = "SELECT * FROM divisi WHERE kd = ?";
+				$params = [$divisi];
+
+				$stmt = sqlsrv_query($conn, $sql, $params);
+
+				if ($stmt === false) {
+					echo "Error in query execution.<br>";
+					if (($errors = sqlsrv_errors()) != null) {
+						foreach ($errors as $error) {
+							echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+							echo "Code: " . $error['code'] . "<br>";
+							echo "Message: " . $error['message'] . "<br>";
+						}
+					}
+				} else {
+					while ($dataa = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$namadivisi = $dataa['namadivisi'];
+					}
+}
 				?>
 				
                                         <tr class="gradeC">
-									<td><? echo $nou++ ?></td>	
+									<td><?php echo $nou++ ?></td>	
 								
-									<td><? echo $tgl ?></td>
-									<td><? echo $jam ?></td>
-                                            <td><? echo $nama ?></td>
-                                            <td><? echo $bagian?></td>
-                                            <td><? echo $namadivisi ?></td>
+									<td><?php echo $tgl ?></td>
+									<td><?php echo $jam ?></td>
+                                            <td><?php echo $nama ?></td>
+                                            <td><?php echo $bagian?></td>
+                                            <td><?php echo $namadivisi ?></td>
 											
-											<td><? echo $penerima ?></td>
-											<td><? echo $kasus ?></td>
-											<td><? echo $tindakan ?></td>
+											<td><?php echo $penerima ?></td>
+											<td><?php echo $kasus ?></td>
+											<td><?php echo $tindakan ?></td>
 											<td>
-											<? if($status=='Selesai'){
+											<?php if($status=='Selesai'){
 											echo $status.' , '.$penerima.' , '.$tgl2; 
-											}else{?><button type="submit" class="btn btn-info" value='<?php echo $nomor; ?>' data-toggle="modal"  data-target="#newReg" name='tomboledit'  onclick="new sendRequest(this.value)">
+											}else{ ?><button type="submit" class="btn btn-info" value='<?php echo $nomor; ?>' data-toggle="modal"  data-target="#newReg" name='tomboledit'  onclick="new sendRequest(this.value)">
                                 Diselesaikan
-											</button><?}?>
+											</button><?php }?>
 											</td>
 											<td>
 <form name="testing" method="POST" action="aplikasi/updateceksoft.php">
-<?
+<?php
 
 
 echo "<table><tr>";
@@ -169,7 +246,7 @@ echo "</tr></table>";
 ?>
 </form>	
 											 </td>
-										  <td class="center"><a href="user.php?menu=editsoftware&nomor=<? echo $nomor ?>" class="btn text-muted text-center btn-primary">Edit</a></td>
+										  <td class="center"><a href="user.php?menu=editsoftware&nomor=<?php echo $nomor ?>" class="btn text-muted text-center btn-primary">Edit</a></td>
 	  <td class="center"><form action="aplikasi/deletesoftware.php" method="post" >
 											<input type="hidden" name="nomor" value=<?php echo $nomor; ?> />
 										
@@ -181,7 +258,7 @@ echo "</tr></table>";
 											
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -226,12 +303,12 @@ echo "</tr></table>";
 &nbsp &nbsp &nbsp &nbsp 
 <b>Jam</b><br>
                                             
-     <input type="text" name="tgl2" value=<?echo $tglini;?> >   
+     <input type="text" name="tgl2" value=<?php echo $tglini;?> >   
 	  &nbsp &nbsp &nbsp &nbsp 
 &nbsp &nbsp &nbsp &nbsp
 &nbsp &nbsp &nbsp &nbsp 
 
-	  <input type="text" name="jam2" value=<?echo $jamini;?>  >               
+	  <input type="text" name="jam2" value=<?php echo $jamini;?>  >               
 			               
 				 </div>	
 <div class="form-group">

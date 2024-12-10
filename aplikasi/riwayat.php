@@ -1,9 +1,11 @@
-<?include('config.php');
+<?php include('config.php');
 	
 ?>  
- <?$jam = date("H:i");
+ <?php
+ $jam = date("H:i");
 ?>
-<?$tanggal = date("d-m-20y ");
+<?php
+$tanggal = date("d-m-20y ");
 ?>
 <!-- <script language="javascript">
 function createRequestObject() {
@@ -108,7 +110,7 @@ document.getElementById('divisi').value = string[1];
 
 </script> -->
 
-<?
+<?php
 function kdauto($tabel, $inisial){
 	$struktur	= mysql_query("SELECT * FROM $tabel");
 	$field		= mysql_field_name($struktur,0);
@@ -179,10 +181,14 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$nou=1;
-									   $sql = mysql_query("SELECT * FROM service where status='selesai' and perangkat in ('CPU', 'LAPTOP') order by nomor desc ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
+                                       <?php
+									   
+			$nou = 1;
+			$sql = "SELECT * FROM service WHERE status = 'selesai' AND perangkat IN ('CPU', 'LAPTOP') ORDER BY nomor DESC";
+			$stmt = sqlsrv_query($conn, $sql);
+
+			if ($stmt !== false) {
+    		while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 				$tgl=$data['tgl'];
 				$jam=$data['jam'];
 				$nama=$data['nama'];
@@ -191,39 +197,47 @@ function kdauto($tabel, $inisial){
 				$divisi=$data['divisi'];
 				$perangkat=$data['perangkat'];
 				$kasus=$data['kasus'];
-					$nomor=$data['nomor'];
+				$nomor=$data['nomor'];
 				$penerima=$data['penerima'];
-					$status=$data['status'];
-						$teknisi=$data['teknisi'];
-						$tindakan=$data['tindakan'];
-						$tgl2=$data['tgl2'];
-						$luar=$data['luar'];
-						$tgl3=$data['tgl3'];
-							$keterangan=$data['keterangan'];
-						$nomor=$data['nomor'];
-						$statup=$data['statup'];
+				$status=$data['status'];
+				$teknisi=$data['teknisi'];
+				$tindakan=$data['tindakan'];
+				$tgl2=$data['tgl2'];
+				$luar=$data['luar'];
+				$tgl3=$data['tgl3'] == null ? '' : $data['tgl3']->format('Y-m-d');	;
+				$keterangan=$data['keterangan'];
+				$nomor=$data['nomor'];
+				$statup=$data['statup'];
 				
-				$sqlll = mysql_query("SELECT * FROM bulan where id_bulan='$bulan' ");
-			while($dataa = mysql_fetch_array($sqlll)){
-			$namabulan=$dataa['bulan'];}
+						// $sql = "SELECT * FROM bulan WHERE id_bulan = ?";
+						// $params = array($bulan);
+						// $stmt = sqlsrv_query($conn, $sql, $params);
+						
+						// if ($stmt !== false) {
+						// 	while ($dataa = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						// 		$namabulan = $dataa['bulan'];
+						// 	}
+						// } else {
+						// 	echo "Query failed: " . print_r(sqlsrv_errors(), true);
+						// }
 				?>
 				
-                                        <tr class="gradeC">
-									<td><? echo $nou++ ?></td>	
-									<td><? echo $nomor ?></td>
+                            	<tr class="gradeC">
+									<td><?php echo $nou++ ?></td>	
+									<td><?php echo $nomor ?></td>
 								
-									<td><? echo $tgl ?></td>
-                                    <td><? echo $nama ?></td>
-                                    <td><? echo $ippc?></td>
-                                    <td><? echo $bagian ?></td>
+									<td><?php echo $tgl->format('Y-m-d') ?></td>
+                                    <td><?php echo $nama ?></td>
+                                    <td><?php echo $ippc?></td>
+                                    <td><?php echo $bagian ?></td>
 									
-									<td><? echo $divisi ?></td>
-									<td><? echo $perangkat ?></td>
-									<td><? echo $kasus ?></td>
-									<td><? echo $tindakan ?></td>
-									<td><?php echo $status; ?>,<?php echo $teknisi; ?>,<?php echo $tgl2; ?>,<?php echo $luar; ?>,<?php echo $tgl3; ?>
+									<td><?php echo $divisi ?></td>
+									<td><?php echo $perangkat ?></td>
+									<td><?php echo $kasus ?></td>
+									<td><?php echo $tindakan ?></td>
+									<td><?php echo $status; ?>,<?php echo $teknisi; ?>,<?php echo $tgl2->format('Y-m-d'); ?>,<?php echo $luar; ?>,<?php echo $tgl3 ; ?>
 									</td>
-									<td><? echo $keterangan ?></td>
+									<td><?php echo $keterangan ?></td>
 									<td>
 										<button type="submit" class="btn btn-primary btn-line" value='<?php echo $nomor; ?>' data-toggle="modal"  data-target="#newReggg" name='tomboledit'  onclick="new sendRequest(this.value)">
                                 		Edit
@@ -242,7 +256,7 @@ function kdauto($tabel, $inisial){
 											
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -269,12 +283,12 @@ function kdauto($tabel, $inisial){
                             <input class="form-control" type="hidden" name="nomor" id="nomor"  readonly>
 
 							Tanggal 
-							<input  type="text" name="tgl"   id="tgl"  required="required">
+							<input  type="date" name="tgl"   id="tgl"  required="required">
 							Jam     
 							<input  type="text" name="jam" id = "jam" required="required" ><br><br>
 
 							Tanggal Selesai 
-							<input  class="form-control" type="text" name="tgl2"   id="tgl2"  required="required">
+							<input  class="form-control" type="date" name="tgl2"   id="tgl2"  required="required">
 					        Nama    
 					        <input class="form-control" type="text" name="nama" id="nama" required="required" >
 							

@@ -1,128 +1,106 @@
 <?php
 include('../config.php');
-if(isset($_POST['tombol'])){
-//Sumber untuk update spesifikasi 
-$nomor=$_POST['nomorup'];
-$user=$_POST['userup'];
-$divisi=$_POST['divisiup'];
-$bagianup=$_POST['bagianup'];
-$idpc=$_POST['idpcup'];
-$idpcc=$_POST['idpccup'];
-$namapc=$_POST['namapcup'];
-$ippc=$_POST['ippcup'];
-$os=$_POST['osup'];
-$prosesor=$_POST['prosesorup'];
-$mobo=$_POST['moboup'];
-$monitor=$_POST['monitorup'];
-$ram=$_POST['ramup'];
-$harddisk=$_POST['harddiskup'];
-$bulan=$_POST['bulanup'];
-$ram1=$_POST['ram1up'];
-$ram2=$_POST['ram2up'];
-$hd1=$_POST['hd1up'];
-$model=$_POST['model'];
-$dvd=$_POST['dvdup'];
-$noper=$_POST['noper'];
-$keterangan=$_POST['keterangan'];
-$hd2=$_POST['hd2up'];
-$powersuply=$_POST['powersuplyup'];
-$cassing=$_POST['cassingup'];
-$tgl_update=$_POST['tgl_updateup'];
-//Sumber service dalam
-$tgl2=$_POST['TglPerbaikan'];
-$jam2=$_POST['JamPerbaikan'];
-$teknisi=$_POST['TeknisiPerbaikan'];
-$tindakan=$_POST['TindakanPerbaikan'];
-$nomorkasus=$_POST['nomorkasus'];
-$statup=$_POST['statup'];
-$tahun=substr($tgl2,-4,4);
-$bulan=substr($tgl2,-7,2);
-$tanggal=substr($tgl2,0,2);
-$tglbaru=$tahun.'-'.$bulan.'-'.$tanggal;
-//Sumber Pengambilan 
-$nofaktur=$_POST['nofaktur'];
-$bagianambil=$_POST['bagianambil'];
-//Sumber Pemasukan Barang
-$nofakturbeli=$_POST['nofakturbeli'];
-$svc_kat = $_POST['svc_kat'];
 
+if (isset($_POST['tombol'])) {
+    // Sumber untuk update spesifikasi 
+    $nomor = $_POST['nomorup'];
+    $user = $_POST['userup'];
+    $divisi = $_POST['divisiup'];
+    $bagianup = $_POST['bagianup'];
+    $idpc = $_POST['idpcup'];
+    $idpcc = $_POST['idpccup'];
+    $namapc = $_POST['namapcup'];
+    $ippc = $_POST['ippcup'];
+    $os = $_POST['osup'];
+    $prosesor = $_POST['prosesorup'];
+    $mobo = $_POST['moboup'];
+    $monitor = $_POST['monitorup'];
+    $ram = $_POST['ramup'];
+    $harddisk = $_POST['harddiskup'];
+    $bulan = $_POST['bulanup'];
+    $ram1 = $_POST['ram1up'];
+    $ram2 = $_POST['ram2up'];
+    $hd1 = $_POST['hd1up'];
+    $model = $_POST['model'];
+    $dvd = $_POST['dvdup'];
+    $noper = $_POST['noper'];
+    $keterangan = $_POST['keterangan'];
+    $hd2 = $_POST['hd2up'];
+    $powersuply = $_POST['powersuplyup'];
+    $cassing = $_POST['cassingup'];
+    $tgl_update = $_POST['tgl_updateup'];
+    // Sumber service dalam
+    $tgl2 = $_POST['TglPerbaikan'];
+    $jam2 = $_POST['JamPerbaikan'];
+    $teknisi = $_POST['TeknisiPerbaikan'];
+    $tindakan = $_POST['TindakanPerbaikan'];
+    $nomorkasus = $_POST['nomorkasus'];
+    $statup = $_POST['statup'];
+    $svc_kat = $_POST['svc_kat'];
+    $nofaktur = $_POST['nofaktur'];
+    $bagianambil = $_POST['bagianambil'];
+    $nofakturbeli = $_POST['nofakturbeli'];
 
-//simpan pemasukan
-$tmasuk = mysql_query("SELECT * FROM trincipembelian where nofaktur='$nofakturbeli' ");
-				if(mysql_num_rows($tmasuk) > 0){
-$katakata='Hasil Update  /  '.$user.'    /    '.$bagianup.'    /    '.$divisi;
-$ppembelian="insert into tpembelian (nofaktur,idsupp,tglbeli,keterangan) 
-values ('".$nofakturbeli."','00004','".$tglbaru."','".$katakata."')";		
-$pppembelian=mysql_query($ppembelian);
-				}
+    // Simpan service dalam
+    $pservice = "UPDATE service 
+                 SET tgl2 = ?, keterangan = ?, statup = ?, jam2 = ?, teknisi = ?, tindakan = ?, status = 'selesai', ket = 'D', svc_kat = ?
+                 WHERE nomor = ?";
+    $params = [$tgl2, $keterangan, $statup, $jam2, $teknisi, $tindakan, $svc_kat, $nomorkasus];
+    $ppservice = sqlsrv_query($conn, $pservice, $params);
 
+    // Simpan pengambilan
+    $ttt = "SELECT * FROM trincipengambilan WHERE nofaktur = ?";
+    $ttt_stmt = sqlsrv_query($conn, $ttt, [$nofaktur]);
+    if (sqlsrv_has_rows($ttt_stmt)) {
+        $ppengambilan = "INSERT INTO tpengambilan (nofaktur, jam, tglambil, nama, bagian, divisi) 
+                         VALUES (?, ?, ?, ?, ?, ?)";
+        $pppengambilan = sqlsrv_query($conn, $ppengambilan, [$nofaktur, $jam2, $tgl2, $user, $bagianambil, $divisi]);
+    }
 
+    // Simpan update spesifikasi
+    $query_update = "UPDATE pcaktif 
+                     SET model = ?, tgl_update = ?, user = ?, divisi = ?, bagian = ?, idpc = ?, namapc = ?, ippc = ?, os = ?, prosesor = ?, 
+                         mobo = ?, monitor = ?, ram = ?, harddisk = ?, ram1 = ?, ram2 = ?, hd1 = ?, hd2 = ?, powersuply = ?, cassing = ?, dvd = ?
+                     WHERE nomor = ?";
+    $update_params = [$model, $tgl2, $user, $divisi, $bagianup, $idpc, $namapc, $ippc, $os, $prosesor, $mobo, $monitor, $ram, $harddisk,
+                      $ram1, $ram2, $hd1, $hd2, $powersuply, $cassing, $dvd, $nomor];
+    $update = sqlsrv_query($conn, $query_update, $update_params);
 
-		
-//simpan service dalam 
-$pservice="UPDATE service set tgl2='".$tgl2."',keterangan='".$keterangan."',statup='".$statup."',jam2='".$jam2."',teknisi='".$teknisi."',tindakan='".$tindakan."'
-,status='selesai',ket='D', svc_kat ='".$svc_kat."'  where nomor='".$nomorkasus."' ";	
-$ppservice=mysql_query($pservice);		
+    // Tambahan untuk permintaan
+    if (!empty($noper)) {
+        $cekambil = "SELECT * FROM trincipengambilan WHERE nofaktur = ?";
+        $cekambil_stmt = sqlsrv_query($conn, $cekambil, [$nofaktur]);
+        while ($resultambil = sqlsrv_fetch_array($cekambil_stmt, SQLSRV_FETCH_ASSOC)) {
+            $namabarangambil = $resultambil['namabarang'];
+            $jumlahambil = $resultambil['jumlah'];
+            $perintahambil = "INSERT INTO rincipermintaan (nomor, nofaktur, namabarang, qtykeluar, tanggal) 
+                              VALUES (?, ?, ?, ?, ?)";
+            sqlsrv_query($conn, $perintahambil, [$noper, $nofaktur, $namabarangambil, $jumlahambil, $tgl2]);
+        }
 
-//simpan pengambilan
-$ttt = mysql_query("SELECT * FROM trincipengambilan where nofaktur='$nofaktur' ");
-				if(mysql_num_rows($ttt) > 0){
-		
-$ppengambilan="insert into tpengambilan (nofaktur,jam,tglambil,nama,bagian,divisi) 
-values ('".$nofaktur."','".$jam2."','".$tglbaru."','".$user."','".$bagianambil."','".$divisi."')";		
-$pppengambilan=mysql_query($ppengambilan);
-				}
-				
-//simpan update spesifikasi
-$query_update="UPDATE pcaktif SET model= '".$model."',tgl_update= '".$tgl2."',user= '".$user."',divisi= '".$divisi."',bagian= '".$bagianup."',idpc= '".$idpc."',namapc= '".$namapc."',
-ippc= '".$ippc."',os= '".$os."',prosesor= '".$prosesor."',mobo= '".$mobo."',monitor= '".$monitor."',ram= '".$ram."',harddisk= '".$harddisk."',
-ram1= '".$ram1."',ram2= '".$ram2."',hd1= '".$hd1."',hd2= '".$hd2."',powersuply= '".$powersuply."',cassing= '".$cassing."',dvd= '".$dvd."'
-WHERE nomor='".$nomor."'";	
+        $cekjumminta = "SELECT qty FROM permintaan WHERE nomor = ?";
+        $cekjumminta_stmt = sqlsrv_query($conn, $cekjumminta, [$noper]);
+        $jumlahminta = sqlsrv_fetch_array($cekjumminta_stmt, SQLSRV_FETCH_ASSOC)['qty'];
 
+        $cekkeluar = "SELECT SUM(qtykeluar) AS jumkel FROM rincipermintaan WHERE nomor = ?";
+        $cekkeluar_stmt = sqlsrv_query($conn, $cekkeluar, [$noper]);
+        $jumlahkeluar = sqlsrv_fetch_array($cekkeluar_stmt, SQLSRV_FETCH_ASSOC)['jumkel'];
 
-$update=mysql_query($query_update);
+        if ($jumlahkeluar == $jumlahminta) {
+            $perubahan = "UPDATE permintaan SET status = 'SELESAI' WHERE nomor = ?";
+            sqlsrv_query($conn, $perubahan, [$noper]);
+        }
+    }
 
-//tambahan untuk permintaan 
-if($noper<>"" ){
+    // Set sesi kosong di trincipengambilan
+    $dd = "UPDATE trincipengambilan SET sesi = '' WHERE sesi = 'ADM'";
+    sqlsrv_query($conn, $dd);
 
-//$cek=mysql_query("select * from trincipembelian where nofaktur='".$nofakturbeli."'");
-	  //while($result=mysql_fetch_array($cek)){
-	  //$namabarang=$result['namabarang'];
-	  //$jumlah=$result['jumlah'];
-
-	//  $perintah="INSERT INTO rincipermintaan (nomor,nofaktur,namabarang,qtymasuk,tanggal) 
-//VALUES ('".$noper."','".$nofakturbeli."','".$namabarang."','".$jumlah."','".$tglbaru."')";
-	  //$perintahh=mysql_query($perintah);}
-	  
-$cekambil=mysql_query("select * from trincipengambilan where nofaktur='".$nofaktur."'");
-	  while($resultambil=mysql_fetch_array($cekambil)){
-	  $namabarangambil=$resultambil['namabarang'];
-	  $jumlahambil=$resultambil['jumlah'];
-
-	  $perintahambil="INSERT INTO rincipermintaan (nomor,nofaktur,namabarang,qtykeluar,tanggal) 
-VALUES ('".$noper."','".$nofaktur."','".$namabarangambil."','".$jumlahambil."','".$tglbaru."')";
-	  $perintahhambil=mysql_query($perintahambil);}
-	  
-	$cekkeluar=mysql_query("select sum(qtykeluar) as jumkel from rincipermintaan where nomor='".$noper."'");
-	  while($rescekkel=mysql_fetch_array($cekkeluar)){
-		  $jumlahkeluar=$rescekkel['jumkel'];	}
-		  
-$cekjumminta=mysql_query("select qty from permintaan where nomor='".$noper."'");
-	  while($resjumminta=mysql_fetch_array($cekjumminta)){
-		  $jumlahminta=$resjumminta['qty'];	}
-
-if($jumlahkeluar==$jumlahminta){
-$perubahan=mysql_query("update permintaan set status='SELESAI' where nomor='".$noper."'");	
-}	  
-	 
+    // Redirect berdasarkan hasil update
+    if ($update) {
+        header("Location: ../user.php?menu=service&stt= Update Berhasil");
+    } else {
+        header("Location: ../user.php?menu=service&stt=gagal");
+    }
 }
-
-$dd="update trincipengambilan set sesi='' where sesi='ADM'";
-$ddd=mysql_query($dd);
-
-if($update){
-header("location:../user.php?menu=service&stt= Update Berhasil");}
-else{
-header("location:../user.php?menu=service&stt=gagal");}}
-
 ?>

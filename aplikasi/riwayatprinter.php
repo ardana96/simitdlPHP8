@@ -1,9 +1,9 @@
-<?include('config.php');
+<?php include('config.php');
 	
 ?>  
- <?$jam = date("H:i");
+ <?php $jam = date("H:i");
 ?>
-<?$tanggal = date("d-m-20y ");
+<?php $tanggal = date("Y-m-d ");
 ?>
 <script language="javascript">
 function createRequestObject() {
@@ -70,7 +70,7 @@ document.getElementById('penerima').value = string[10];
 }}
 
 </script>
-<?
+<?php
 function kdauto($tabel, $inisial){
 	$struktur	= mysql_query("SELECT * FROM $tabel");
 	$field		= mysql_field_name($struktur,0);
@@ -140,51 +140,52 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    	<? $no = 1?>
-                                       <?$sql = mysql_query("SELECT * FROM service where status='selesai' and perangkat<>'CPU' order by nomor DESC ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$tgl=$data['tgl'];
-				$jam=$data['jam'];
-				$nama=$data['nama'];
-				$ippc=$data['ippc'];
-				$bagian=$data['bagian'];
-				$divisi=$data['divisi'];
-				$perangkat=$data['perangkat'];
-				$kasus=$data['kasus'];
-					$nomor=$data['nomor'];
-				$penerima=$data['penerima'];
-					$status=$data['status'];
-					$noprinter=$data['noprinter'];
+                                    	<?php $no = 1?>
+                                       <?php 
+				$sql = "SELECT * FROM service WHERE status = 'selesai' AND perangkat <> 'CPU' ORDER BY nomor DESC";
+				$stmt = sqlsrv_query($conn, $sql);
+				
+				if ($stmt !== false) {
+					while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+						$tgl=$data['tgl'] == null ? '-' : $data['tgl']->format('Y-m-d');
+						$jam=$data['jam'];
+						$nama=$data['nama'];
+						$ippc=$data['ippc'];
+						$bagian=$data['bagian'];
+						$divisi=$data['divisi'];
+						$perangkat=$data['perangkat'];
+						$kasus=$data['kasus'];
+						$nomor=$data['nomor'];
+						$penerima=$data['penerima'];
+						$status=$data['status'];
+						$noprinter=$data['noprinter'];
 						$teknisi=$data['teknisi'];
 						$tindakan=$data['tindakan'];
-						$tgl2=$data['tgl2'];
+						$tgl2=$data['tgl2'] == null ? '-' : $data['tgl2']->format('Y-m-d');
 						$luar=$data['luar'];
-						$tgl3=$data['tgl3'];
-							$keterangan=$data['keterangan'];
+						$tgl3=$data['tgl3'] == null ? '-' : $data['tgl3']->format('Y-m-d');
+						$keterangan=$data['keterangan'];
 						$nomor=$data['nomor'];
 						$statup=$data['statup'];
+		
 				
-				$sqlll = mysql_query("SELECT * FROM bulan where id_bulan='$bulan' ");
-			while($dataa = mysql_fetch_array($sqlll)){
-			$namabulan=$dataa['bulan'];}
 				?>
 				
                                         <tr class="gradeC">
-                                        	<td><? echo $no++ ?></td>
-									<td><? echo $nomor ?></td>	
+                                        	<td><?php echo $no++ ?></td>
+									<td><?php echo $nomor ?></td>	
 								
-									<td><? echo $tgl ?></td>
-                                            <td><? echo $nama ?></td>
-                                            <td><? echo $noprinter?></td>
-                                            <td><? echo $bagian ?></td>
+									<td><?php echo $tgl ?></td>
+                                            <td><?php echo $nama ?></td>
+                                            <td><?php echo $noprinter?></td>
+                                            <td><?php echo $bagian ?></td>
 											
-											<td><? echo $divisi ?></td>
-											<td><? echo $perangkat ?></td>
-											<td><? echo $kasus ?></td>
-												<td><? echo $tindakan ?></td>
+											<td><?php echo $divisi ?></td>
+											<td><?php echo $perangkat ?></td>
+											<td><?php echo $kasus ?></td>
+												<td><?php echo $tindakan ?></td>
 											<td><?php echo $status; ?>,<?php echo $teknisi; ?>,<?php echo $tgl2; ?>,<?php echo $luar; ?>,<?php echo $tgl3; ?></td>
-											<td><? echo $keterangan ?></td>
+											<td><?php echo $keterangan ?></td>
                             				<td>
 												<button type="submit" class="btn btn-primary btn-line" value='<?php echo $nomor; ?>' data-toggle="modal"  data-target="#newReggg" name='tomboledit'  onclick="new sendRequest(this.value)">
 		                                		Edit
@@ -204,7 +205,7 @@ function kdauto($tabel, $inisial){
 											
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -230,7 +231,7 @@ function kdauto($tabel, $inisial){
 	                            <input class="form-control" type="hidden" name="nomor" id="nomor"  readonly>
 
 								Tanggal 
-								<input  type="text" name="tgl"   id="tgl"  required="required">
+								<input  type="date" name="tgl"   id="tgl"  required="required">
 								Jam  
 								<input  type="text" name="jam" id = "jam" required="required" ><br><br>
 
@@ -238,7 +239,7 @@ function kdauto($tabel, $inisial){
 								<input  class="form-control" type="text" name="tgl2"   id="tgl2"  required="required">
 
 								Tanggal Selesai
-								<input  class="form-control" type="text" name="tgl3"   id="tgl3"  required="required">
+								<input  class="form-control" type="date" name="tgl3"   id="tgl3"  required="required">
 						        Nama    
 						        <input class="form-control" type="text" name="nama" id="nama" required="required" >
 								Bagian 

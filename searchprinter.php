@@ -5,16 +5,33 @@
 </head>
 <body>
 <?php
-mysql_connect("localhost", "root", "dlris30g") or die(mysql_error());
-mysql_select_db("sitdl") or die(mysql_error());
-if (isset($_GET['search']) && $_GET['search'] != '') {
- //Add slashes to any quotes to avoid SQL problems.
- $search = $_GET['search'];
- $suggest_query = mysql_query("SELECT * FROM printer WHERE keterangan like('%" .$search . "%')  ");
- while($suggest = mysql_fetch_array($suggest_query)) {
-  echo $suggest['keterangan'] . "\n";
- }
+include('config.php');
+if (isset($_GET['search']) && $_GET['search'] != '') { 
+    // Hindari SQL Injection dengan parameterized query
+    $search = $_GET['search'];
+    $query = "SELECT * FROM printer WHERE keterangan LIKE ?";
+    $params = ['%' . $search . '%'];
+    
+    $stmt = sqlsrv_query($conn, $query, $params);
+
+    // Periksa apakah query berhasil
+    if ($stmt === false) {
+        // Tangkap error jika query gagal
+        $errors = sqlsrv_errors();
+        foreach ($errors as $error) {
+            echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+            echo "Kode Kesalahan: " . $error[0] . "<br>";
+            echo "Pesan Kesalahan: " . $error[2] . "<br>";
+        }
+        die("Query gagal dijalankan.");
+    }
+
+    // Fetch dan tampilkan data
+    while ($suggest = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        echo $suggest['keterangan'] . "\n";
+    }
 }
 ?>
+
 </body>
 </html>
