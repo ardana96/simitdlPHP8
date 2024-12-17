@@ -1,6 +1,6 @@
 <?php
 require('kop_hardware.php');
-
+include('../config.php');
  
 function GenerateWord()
 {
@@ -93,6 +93,31 @@ function selisihHari($tglAwal, $tglAkhir){
 	return $selisihTotal;
 }
 
+function countWorkDays($start_date, $end_date) {
+    // Konversi tanggal ke format DateTime
+    $start = new DateTime($start_date);
+    $end = new DateTime($end_date);
+
+    // Pastikan tanggal akhir lebih besar dari tanggal awal
+    if ($start > $end) {
+        return 0;
+    }
+
+    $workDays = 0;
+
+    // Iterasi dari tanggal awal ke tanggal akhir
+    while ($start <= $end) {
+        // Cek jika hari bukan Sabtu (6) atau Minggu (0)
+        if ($start->format('N') < 6) { // N memberikan angka 1-7 untuk Senin-Minggu
+            $workDays++;
+        }
+        // Tambahkan 1 hari
+        $start->modify('+1 day');
+    }
+
+    return $workDays;
+}
+
 $pdf=new PDF ('L');
 $pdf->AddPage();
 $pdf->SetFont('Arial','',8);
@@ -101,13 +126,13 @@ $pdf->SetWidths(array(7,17,19,40,30,50,20,30,25,20,20));
 //srand(microtime()*1000000);
 
 //koneksi ke database
-mysql_connect("localhost","root","dlris30g");
-mysql_select_db("sitdl");
+// mysql_connect("localhost","root","dlris30g");
+// mysql_select_db("sitdl");
 
-$status=$_POST['status'];
+// $status=$_POST['status'];
 $bln_akhir=$_POST['bln_akhir'];
 $thn_akhir=$_POST['thn_akhir'];
-$tanggal_akhir=$thn_akhir.$bln_akhir.$tgl_akhir;
+$tanggal_akhir=$thn_akhir.$bln_akhir;
 $tanggal_akhir_format=$bln_akhir."-".$thn_akhir;
 
 
@@ -149,39 +174,70 @@ $tanggal_akhir_format=$bln_akhir."-".$thn_akhir;
 // }
 
 
-$sql=mysql_query("SELECT 
-a.tgl as tgl,
-a.nama as nama,
-a.bagian as bagian,
-a.tgl2 as tgl2,
-b.namadivisi as namadivisi,
-a.kasus as kasus,
-a.penerima as penerima,
-a.teknisi as teknisi,
-a.tindakan as tindakan,
- a.status as status,
-a.ippc as ippc,
-c.model as perangkat,
-a.svc_kat as kategori,
-a.tglRequest as tglRequest
+// $sql=mysql_query("SELECT 
+// a.tgl as tgl,
+// a.nama as nama,
+// a.bagian as bagian,
+// a.tgl2 as tgl2,
+// b.namadivisi as namadivisi,
+// a.kasus as kasus,
+// a.penerima as penerima,
+// a.teknisi as teknisi,
+// a.tindakan as tindakan,
+//  a.status as status,
+// a.ippc as ippc,
+// c.model as perangkat,
+// a.svc_kat as kategori,
+// a.tglRequest as tglRequest
 
- FROM service a
-LEFT JOIN divisi b ON a.divisi = b.`kd`
-LEFT JOIN pcaktif c ON c.ippc = a.ippc 
-WHERE  a.statup='service' AND a.status='Selesai' AND a.ket='D' 
-and  a.tgl like '%".$tanggal_akhir_format."'
-ORDER BY a.svc_kat, a.tgl ASC");
-$count=mysql_num_rows($sql);
+//  FROM service a
+// LEFT JOIN divisi b ON a.divisi = b.`kd`
+// LEFT JOIN pcaktif c ON c.ippc = a.ippc 
+// WHERE  a.statup='service' AND a.status='Selesai' AND a.ket='D' 
+// and  a.tgl like '%".$tanggal_akhir_format."'
+// ORDER BY a.svc_kat, a.tgl ASC");
+// $count=mysql_num_rows($sql);
+// $no = 0;
+// for($i=0;$i<$count;$i++);{
+// while ($database = mysql_fetch_array($sql)) {
+// $no++;	
+
+
+$sql = "SELECT 
+    a.tgl AS tgl,
+    a.nama AS nama,
+    a.bagian AS bagian,
+    a.tgl2 AS tgl2,
+    b.namadivisi AS namadivisi,
+    a.kasus AS kasus,
+    a.penerima AS penerima,
+    a.teknisi AS teknisi,
+    a.tindakan AS tindakan,
+    a.status AS status,
+    a.ippc AS ippc,
+    c.model AS perangkat,
+    a.svc_kat AS kategori,
+    a.tglRequest AS tglRequest
+FROM service a
+LEFT JOIN divisi b ON a.divisi = b.kd
+LEFT JOIN pcaktif c ON c.ippc = a.ippc
+where  a.statup='service' AND a.status='Selesai' AND a.ket='D' 
+AND MONTH(a.tgl) = '".$bln_akhir."'
+AND YEAR(a.tgl) = '".$thn_akhir."'
+ORDER BY a.svc_kat, a.tgl ASC";
+
+$params = ["%" . $tanggal_akhir_format . "%"];
+$stmt = sqlsrv_query($conn, $sql, $params);
+
 $no = 0;
-for($i=0;$i<$count;$i++);{
-while ($database = mysql_fetch_array($sql)) {
-$no++;	
+while ($database = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $no++;
 
-$tgl=$database['tgl'];
+$tgl=$database['tgl'] ? $database['tgl']->format('d-m-Y') : '';
 $nama=$database['nama'];
 $bagian=$database['bagian'];
-$barang=$database['barang'];
-$tgl2=$database['tgl2'];
+//$barang=$database['barang'];
+$tgl2=$database['tgl2'] ? $database['tgl2']->format('d-m-Y') : '';
 $divisi=$database['namadivisi'];
 $kasus=$database['kasus'];
 $penerima=$database['penerima'];
@@ -191,7 +247,7 @@ $status=$database['status'];
 $ippc=$database['ippc'];
 $perangkat=$database['perangkat'];
 $kategori = $database['kategori'];
-$tglRequest = $database['tglRequest'];
+$tglRequest = $database['tglRequest'] ? $database['tglRequest']->format('d-m-Y') : '';
 // $tgl=$database['a.tgl'];
 // $nama=$database['a.nama'];
 // $bagian=$database['a.bagian'];
@@ -207,20 +263,20 @@ $tglRequest = $database['tglRequest'];
 // $perangkat=$database['c.model'];
 $awal=substr($tgl,0,2);
 $akhir=substr($tgl2,0,2);
-$semua=$hbulan;
+//$semua=$hbulan;
 $bulan_awal=substr($tgl,3,2);
 $bulan_akhir=substr($tgl2,3,2);
-$total_bulan=$bulan_akhir-$bulan_awal;
-$hbulan=$total_bulan*30+$akhir-$awal;
+//$total_bulan=$bulan_akhir-$bulan_awal;
+//$hbulan=$total_bulan*30+$akhir-$awal;
 $namabesar=strtoupper($nama);
 $perangkatbesar=strtoupper($perangkat);
 $kasusbesar=strtoupper($kasus);
 $penerimabesar=strtoupper($penerima);
 $statusbesar=strtoupper($status);
 $teknisibesar=strtoupper($teknisi);
-if($hbulan == 0){
-$hbulan=1;	
-}
+// if($hbulan == 0){
+// $hbulan=1;	
+// }
 
 if($kategori == "NON_SP"){
 	$kategori_text = "NON SPAREPART";
@@ -278,12 +334,12 @@ $durasi = 0;
 if($tglRequest == ""|| $tglRequest == null){
 	$durasi = 0;
 }else{
-	$durasi = selisihHari($tglRequest,$tgl);
+	$durasi = countWorkDays($tglRequest,$tgl);
 	//$durasi = 2;
 }
 
-$pdf->Row(array($no, $tglRequest, $tgl,$namabesar."\n".$bagian."-".$divisi,$perangkatbesar,$kasusbesar,$penerimabesar,$statusbesar."-".$teknisibesar."    (".$tgl2.")", $kategori_text, selisihHari($tgl,$tgl2)." hr", $durasi." hr"));
-}}
+$pdf->Row(array($no, $bln_akhir, $tgl,$namabesar."\n".$bagian."-".$divisi,$perangkatbesar,$kasusbesar,$penerimabesar,$statusbesar."-".$teknisibesar."    (".$tgl2.")", $kategori_text, countWorkDays($tgl,$tgl2)." hr", $durasi." hr"));
+}
 $pdf->Output();
 
 

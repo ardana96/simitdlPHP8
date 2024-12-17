@@ -1,4 +1,6 @@
-<?include('config.php');?>  
+<?php
+
+include('config.php');?>  
 
             <div class="inner">
                 <div class="row">
@@ -33,9 +35,12 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT ippc, COUNT(*) jumlah FROM pcaktif GROUP BY ippc HAVING COUNT(ippc)  > 1");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
+                                       <?php
+                $sql = "SELECT ippc, COUNT(*) AS jumlah FROM pcaktif GROUP BY ippc HAVING COUNT(ippc) > 1";
+                $stmt = sqlsrv_query($conn, $sql);
+
+                if (sqlsrv_has_rows($stmt)) {
+                    while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 				$ippc=$data['ippc'];
 				$jumlah=$data['jumlah'];
 		
@@ -50,7 +55,7 @@
 									
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>

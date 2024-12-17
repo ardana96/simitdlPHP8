@@ -1,7 +1,7 @@
-<?include('config.php');
-	if(isset($_POST['idpc'])){
-$idpcc=$_POST['idpc'];
-	}
+<?php include('config.php');
+	// if(isset($_POST['idpc'])){
+	// $idpcc=$_POST['idpc'];
+	// }
 ?>  
 
             <div class="inner">
@@ -9,7 +9,7 @@ $idpcc=$_POST['idpc'];
                     <div class="col-lg-12">
 
 
-                        <h2>Daftar Pemakai Komputer <? echo $idpcc; ?></h2>
+                        <h2>Daftar Pemakai Komputer <?php //echo $idpcc; ?></h2>
 
 
 
@@ -57,9 +57,25 @@ $idpcc=$_POST['idpc'];
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM pcaktif order by ippc desc ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
+                                       <?php 
+									   $query = "SELECT * FROM pcaktif ORDER BY ippc DESC";
+									   $stmt = sqlsrv_query($conn, $query);
+									   
+									   if ($stmt === false) {
+										   
+
+										   echo "Query gagal dijalankan.<br>";
+										   if (($errors = sqlsrv_errors()) != null) {
+											   foreach ($errors as $error) {
+												   echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+												   echo "Code: " . $error['code'] . "<br>";
+												   echo "Message: " . $error['message'] . "<br>";
+											   }
+										   }
+									   } else {
+											while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+											
+									   
 				$user=$data['user'];
 				$nomor=$data['nomor'];
 				$bagian=$data['bagian'];
@@ -73,28 +89,33 @@ $idpcc=$_POST['idpc'];
 				$bulan=$data['bulan'];
 				$prosesor=$data['prosesor'];
 				$mobo=$data['mobo'];
-				$tgl_perawatan=$data['tgl_perawatan'];
-				$tgl_update=$data['tgl_update'];
-				$sqlll = mysql_query("SELECT * FROM bulan where id_bulan='$bulan' ");
-			while($dataa = mysql_fetch_array($sqlll)){
-			$namabulan=$dataa['bulan'];}
+				$tgl_perawatan=$data['tgl_perawatan']? $data['tgl_perawatan']->format('Y-m-d') : '';
+				$tgl_update=$data['tgl_update'] ? $data['tgl_update']->format('Y-m-d') : '';
+
+				$query = "SELECT * FROM bulan WHERE id_bulan = '$bulan'";
+				$params = [$bulan];
+				$stmtbulan = sqlsrv_query($conn, $query, $params);
+				while ($dataa = sqlsrv_fetch_array($stmtbulan, SQLSRV_FETCH_ASSOC)) {
+					$namabulan = $dataa['bulan'];
+				}
+			
 				?>
 				
                                 <tr class="gradeC">		
-									<td><? echo $nomor ?></td>
-									<td><? echo $ippc ?></td>
-									<td><? echo $idpc ?></td>
-                                    <td><? echo $user ?></td>
-                                    <td><? echo $namapc?></td>
-                                    <td><? echo $bagian ?></td>
-                                    <td><? echo $subbagian?></td>
-                                    <td><? echo $lokasi?></td>
-									<td><? echo $prosesor ?></td>
-									<td><? echo $mobo ?></td>
-									<td><? echo $ram ?></td>
-									<td><? echo $harddisk ?></td>
-									<td><? echo $namabulan ?></td>
-									<td><? echo $tgl_perawatan ?></td>
+									<td><?php echo $nomor ?></td>
+									<td><?php echo $ippc ?></td>
+									<td><?php echo $idpc ?></td>
+                                    <td><?php echo $user ?></td>
+                                    <td><?php echo $namapc?></td>
+                                    <td><?php echo $bagian ?></td>
+                                    <td><?php echo $subbagian?></td>
+                                    <td><?php echo $lokasi?></td>
+									<td><?php echo $prosesor ?></td>
+									<td><?php echo $mobo ?></td>
+									<td><?php echo $ram ?></td>
+									<td><?php echo $harddisk ?></td>
+									<td><?php echo $namabulan ?></td>
+									<td><?php echo $tgl_perawatan ?></td>
 									<td class="center">
 										<form action="user.php?menu=fupdate_pemakaipc" method="post" >
 											<input type="hidden" name="nomor" value=<?php echo $nomor; ?> />
@@ -117,7 +138,7 @@ $idpcc=$_POST['idpc'];
 										</form> 
 									</td>
 								</tr>
-                				<?}}?>                      
+                				<?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>

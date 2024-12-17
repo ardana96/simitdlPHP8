@@ -1,4 +1,5 @@
-<?include('config.php');?>  
+<?php 
+include('config.php');?>  
 <script language="javascript">
 function createRequestObject() {
 var ajax;
@@ -42,7 +43,7 @@ mywin=window.open("aplikasi/lap_permintaandetail.php?nomor=" + nomor ,"_blank",	
 
 
 </script>
-<?
+<?php
 function kdauto($tabel, $inisial){
 	$struktur	= mysql_query("SELECT * FROM $tabel");
 	$field		= mysql_field_name($struktur,0);
@@ -109,44 +110,86 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM permintaan where aktif='nonaktif' ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
+                <?php
+
+				
+
+				// Query untuk mengambil data permintaan dengan status 'nonaktif'
+				$sql = "SELECT * FROM permintaan WHERE aktif = 'nonaktif'";
+
+				// Eksekusi query
+				$stmt = sqlsrv_query($conn, $sql);
+
+				if ($stmt === false) {
+					die(print_r(sqlsrv_errors(), true)); // Menampilkan error jika query gagal
+				}
+
+				if (sqlsrv_has_rows($stmt)) {
+					while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 				$nomor=$data['nomor'];
-				$tgl=$data['tgl'];
+				$tgl=$data['tgl'] ? $data['tgl']->format('d-m-Y') : '';
 				$nama=$data['nama'];
 				$bagian=$data['bagian'];
 				$divisi=$data['divisi'];
 				$namabarang=$data['namabarang'];
 				$qty=$data['qty'];
-				$masuk=$data['qtymasuk'];
+				//$masuk=$data['qtymasuk'];
 				$keterangan=$data['keterangan'];
 				$status=$data['status'];
-				$tgl2=$data['tgl2'];
+				//$tgl2=$data['tgl2'];
 				
-				$cek=mysql_query("select sum(qtymasuk) as totalmasuk,sum(qtykeluar) as totalkeluar from rincipermintaan where nomor='".$nomor."' ");
-	  while($result=mysql_fetch_array($cek)){
-	  $totalmasuk=$result['totalmasuk'];
-	  $totalkeluar=$result['totalkeluar'];
+	// 	$cek=mysql_query("select sum(qtymasuk) as totalmasuk,sum(qtykeluar) as totalkeluar from rincipermintaan where nomor='".$nomor."' ");
+	//   while($result=mysql_fetch_array($cek)){
+	//   $totalmasuk=$result['totalmasuk'];
+	//   $totalkeluar=$result['totalkeluar'];
 	
-	  }
-	  $sisa=$qty-$totalmasuk; 
-	    $refresh = mysql_query("update permintaan set sisa='".$sisa."' where nomor='".$nomor."'  ");
+	//   }
+	//   $sisa=$qty-$totalmasuk; 
+	//     $refresh = mysql_query("update permintaan set sisa='".$sisa."' where nomor='".$nomor."'  ");
+		
+		$sql = "SELECT SUM(qtymasuk) AS totalmasuk, SUM(qtykeluar) AS totalkeluar FROM rincipermintaan WHERE nomor = ?";
+		$params = [$nomor]; // Parameter nomor
+		
+		// Eksekusi query
+		$stmt = sqlsrv_query($conn, $sql, $params);
+		
+		if ($stmt === false) {
+			die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+		}
+		
+		$totalmasuk = 0;
+		$totalkeluar = 0;
+		
+		if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+			$totalmasuk = $row['totalmasuk'];
+			$totalkeluar = $row['totalkeluar'];
+		}
+		
+		// Hitung sisa
+		$sisa = $qty - $totalmasuk;
+		
+		// Query untuk memperbarui sisa ke dalam tabel permintaan
+		$updateSql = "UPDATE permintaan SET sisa = ? WHERE nomor = ?";
+		$updateParams = [$sisa, $nomor];
+		
+		// Eksekusi query update
+		$updateStmt = sqlsrv_query($conn, $updateSql, $updateParams);
+
 	  
 				?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $tgl ?></td>
-											   <td><? echo $nama ?></td>
-                                            <td><? echo $bagian ?></td>
-                                            <td><? echo $divisi ?></td>
-											<td><? echo $namabarang ?></td>
-											<td><? echo $qty?></td>
-											<td><? echo $keterangan ?></td>
-											<td><? echo $status ?></td>
-											<td><? echo $totalmasuk ?></td>
-											<td><? echo $totalkeluar ?></td>
-											<td><? echo $qty-$totalmasuk ?></td>
+                                            <td><?php echo $tgl ?></td>
+											   <td><?php echo $nama ?></td>
+                                            <td><?php echo $bagian ?></td>
+                                            <td><?php echo $divisi ?></td>
+											<td><?php echo $namabarang ?></td>
+											<td><?php echo $qty?></td>
+											<td><?php echo $keterangan ?></td>
+											<td><?php echo $status ?></td>
+											<td><?php echo $totalmasuk ?></td>
+											<td><?php echo $totalkeluar ?></td>
+											<td><?php echo $qty-$totalmasuk ?></td>
 										
                              
 											
@@ -155,10 +198,10 @@ function kdauto($tabel, $inisial){
 										
 											<button  name="tombol" class="btn text-muted text-center btn-danger" type="submit" onclick="return confirm('Apakah anda yakin akan membuka data ini?')">Show</button>
 											</form> </td>
-										 <td><? echo $nomor ?></td>
+										 <td><?php echo $nomor ?></td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>

@@ -9,16 +9,7 @@ document.onkeypress = dontEnter;
 
 </script>
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('config.php')
 ?>
 
 
@@ -31,45 +22,89 @@ border:1px;
 	background-color: #FFF;}
 </style>
 
-<?
-$datee=date('20y-m-d');
+<?php
+$datee=date('Y-m-d');
  $jam = date("H:i");
-$date=date('ymd');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+$date=date('Y-m-d');
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
 $no_faktur=kdauto("tpengambilan",'');
 ?>
 
 <?php
-$query_rinci_jual="SELECT * FROM trincipengambilan WHERE nofaktur='".$no_faktur."'";
-$get_hitung_rinci=mysql_query($query_rinci_jual);
-$hitung=mysql_num_rows($get_hitung_rinci);
-$total_jual=0; $total_item=0;
-while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
-$jml=$hitung_total['jumlah'];
-$sub_total=$hitung_total['sub_total_jual'];
-$total_jual=$sub_total+$total_jual;
-$total_item=$jml+$total_item;}
+// $query_rinci_jual="SELECT * FROM trincipengambilan WHERE nofaktur='".$no_faktur."'";
+// $get_hitung_rinci=mysql_query($query_rinci_jual);
+// $hitung=mysql_num_rows($get_hitung_rinci);
+// $total_jual=0; $total_item=0;
+// while($hitung_total=mysql_fetch_array($get_hitung_rinci)){
+// $jml=$hitung_total['jumlah'];
+// $sub_total=$hitung_total['sub_total_jual'];
+// $total_jual=$sub_total+$total_jual;
+// $total_item=$jml+$total_item;}
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -145,10 +180,10 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 	<div id="info_transaksi">
       	<form id="form_penjualan"  method="post" action="aplikasi/simpaninputpc.php" enctype="multipart/form-data" name="postform2" >
 	  	Nomor
-	  	<input  readonly class="form-control"  type="text" name="nomoroke" value="<? echo kdauto("pcaktif",""); ?>" >
+	  	<input  readonly class="form-control"  type="text" name="nomoroke" value="<?php echo kdauto("pcaktif",""); ?>" >
         Divisi                                    
        <select class="form-control" name="divisi" required='required'>
-			 <option value=<? echo $divisi; ?> ><? echo $divisi; ?></option>
+			 <option ></option>
 			 <option value="AMBASADOR">AMBASADOR</option>
 			 <option value="EFRATA">EFRATA</option>
 			 <option value="GARMENT">GARMENT</option>
@@ -175,62 +210,97 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 		
  		Bagian                                      
         <select class="form-control" name='bagian' required='required'> 
-        	<option value=<? echo $bagian; ?> ><? echo $bagian; ?>
-        	</option>
-            
-				<?	$s = mysql_query("SELECT * FROM bagian_pemakai order by bag_pemakai asc");
-					if(mysql_num_rows($s) > 0){
-			 		while($datas = mysql_fetch_array($s)){
-					$id_bag_pemakai=$datas['id_bag_pemakai'];
-					$bag_pemakai=$datas['bag_pemakai'];?>
-	
-			<option value="<? echo $bag_pemakai; ?>"> <? echo $bag_pemakai; ?>
-			</option>
-			 
-				<?}}?>
+			<option ></option>
+        	<?php
+			$query = "SELECT * FROM bagian_pemakai ORDER BY bag_pemakai ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$id_bag_pemakai = $datas['id_bag_pemakai'];
+					$bag_pemakai = $datas['bag_pemakai'];
+					?>
+					<option value="<?php echo $bag_pemakai; ?>"><?php echo $bag_pemakai; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
         </select>
         Sub Bagian                                      
         <select class="form-control" name='subbagian' required='required'> 
-        	<option value=<? echo $subbag_nama; ?> ><? echo $subbag_nama; ?>
-        	</option>
+        	<option></option>
             
-				<?	$s = mysql_query("SELECT * FROM sub_bagian order by subbag_nama asc");
-					if(mysql_num_rows($s) > 0){
-			 		while($datas = mysql_fetch_array($s)){
-					$subbag_id=$datas['subbag_id'];
-					$subbag_nama=$datas['subbag_nama'];?>
-	
-			<option value="<? echo $subbag_nama; ?>"> <? echo $subbag_nama; ?>
-			</option>
-			 
-				<?}}?>
+			<?php
+			$query = "SELECT * FROM sub_bagian ORDER BY subbag_nama ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$subbag_id = $datas['subbag_id'];
+					$subbag_nama = $datas['subbag_nama'];
+					?>
+					<option value="<?php echo $subbag_nama; ?>"><?php echo $subbag_nama; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
         </select>
 
         Lokasi
         <select class="form-control" name='lokasi' required='required'> 
-        	<option value=<? echo $lokasi_nama; ?> ><? echo $lokasi_nama; ?>
-        	</option>
+        	<option ></option>
             
-				<?	$s = mysql_query("SELECT * FROM lokasi order by lokasi_nama asc");
-					if(mysql_num_rows($s) > 0){
-			 		while($datas = mysql_fetch_array($s)){
-					$lokasi_id=$datas['lokasi_id'];
-					$lokasi_nama=$datas['lokasi_nama'];?>
-	
-			<option value="<? echo $lokasi_nama; ?>"> <? echo $lokasi_nama; ?>
-			</option>
-			 
-				<?}}?>
+			<?php
+			$query = "SELECT * FROM lokasi ORDER BY lokasi_nama ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$lokasi_id = $datas['lokasi_id'];
+					$lokasi_nama = $datas['lokasi_nama'];
+					?>
+					<option value="<?php echo $lokasi_nama; ?>"><?php echo $lokasi_nama; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
         </select>
 
 
 
 		User
-		<input  class="form-control"  type="text" name="user" value="<? echo $user; ?>">
+		<input  class="form-control"  type="text" name="user">
 		ID Komputer
-		<input  class="form-control"  type="text" name="idpc" value="<? echo $idpc; ?>" >                                           
+		<input  class="form-control"  type="text" name="idpc" >                                           
 		Nama Komputer
-		<input  class="form-control"  type="text" name="namapc" value="<? echo $namapc; ?>">                                     
+		<input  class="form-control"  type="text" name="namapc">                                     
 		<br>
     </div>
 
@@ -245,33 +315,33 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 
 	   <div class="form-group">
  <b>Operation System</b>         
-        <input  class="form-control"  type="text" name="os" value="<? echo $os; ?>" >
+        <input  class="form-control"  type="text" name="os" >
                                         
                                     
                                         </div>	
 											   <div class="form-group">
  <b>IP Komputer</b>         
-        <input    class="form-control"  type="text" name="ippc"  value="<? echo $ippc; ?>">
+        <input    class="form-control"  type="text" name="ippc"  >
                                         
                                     
                                         </div>
 						
 	                                       <div class="form-group">
  <b>Total Kapasitas Harddsik</b>         
-        <input  class="form-control"  type="text" name="harddisk" value="<? echo $harddisk; ?>">
+        <input  class="form-control"  type="text" name="harddisk" >
                                         </div>
                                     
  
 	   <div class="form-group">
  <b>Total Kapasitas RAM</b>         
-        <input   class="form-control"  type="text" name="ram" value="<? echo $ram; ?>">
+        <input   class="form-control"  type="text" name="ram" >
                                         
                                     
                                         </div>		
 		<div class="form-group">
 		<b>Model</b>                                    
 		<select class="form-control" name="model" required='required'>
-			 <option value=<? echo $model; ?> ><? echo $model; ?></option>
+			 <option  ></option>
 			 <option value="CPU">CPU</option>
 			 <option value="LAPTOP">LAPTOP</option>
 		</select>
@@ -279,17 +349,27 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 <div class="form-group">
  <b>Monitor</b><font color=red>Tidak Mengurangi Stock Hanya Merubah Nama</font>          
       <select class="form-control" name='monitor' >
-	  <option value="<? echo $monitor; ?>"> <? echo $monitor; ?></option>
+	  <option > </option>
             
-			<?	$smonitor = mysql_query("SELECT * FROM tbarang where idkategori='00009' ");
-				if(mysql_num_rows($smonitor) > 0){
-			 while($datamonitor = mysql_fetch_array($smonitor)){
-				$idbarangmonitor=$datamonitor['idbarang'];
-				$namabarangmonitor=$datamonitor['namabarang'];?>
-			 <option value="<? echo $namabarangmonitor; ?>"> <? echo $namabarangmonitor; ?>
-			 </option>
-			 
-			 <?}}?>
+			
+
+			<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00009' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
 			
     
         </select> 
@@ -299,17 +379,25 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
   <div class="form-group">
  <b>RAM Slot 1</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
       <select class="form-control" name='ram1' >
-	  <option value="<? echo $ram1; ?>"> <? echo $ram1; ?></option>
+	  <option > </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
+	  		<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00006' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
 			
     
         </select> 
@@ -320,17 +408,25 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 		  <div class="form-group">
  <b>RAM Slot 2</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
       <select class="form-control" name='ram2' >
-	  <option value="<? echo $ram2; ?>" ><? echo $ram2; ?> </option>
+	  <option  ></option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00006' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
+	  		<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00006' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
 			
     
         </select> 
@@ -341,17 +437,25 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
    <div class="form-group">
  <b>Harddisk Slot 1</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
       <select class="form-control" name='hd1' >
-	  <option value="<? echo $hd1; ?>"><? echo $hd1; ?> </option>
+	  <option > </option>
             
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' ");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $namabarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
+	  	<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00005' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
 			
     
         </select> 
@@ -362,17 +466,25 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
   <div class="form-group">
  <b>Harddisk Slot 2</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
       <select class="form-control" name='hd2' >
-	  <option value="<? echo $hd2; ?>" ><? echo $hd2; ?> </option>
+	  <option  > </option>
             
-			<?	$s5 = mysql_query("SELECT * FROM tbarang where idkategori='00005' ");
-				if(mysql_num_rows($s5) > 0){
-			 while($datas5 = mysql_fetch_array($s5)){
-				$idbarang5=$datas5['idbarang'];
-				$namabarang5=$datas5['namabarang'];?>
-			 <option value="<? echo $namabarang5; ?>"> <? echo $namabarang5; ?>
-			 </option>
-			 
-			 <?}}?>
+	  		<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00005' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
 			
     
         </select> 
@@ -383,18 +495,26 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 	   <div class="form-group">
  <b>Motherboard </b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>         
       <select class="form-control" name='mobo' >	
-	  <option value="<? echo $mobo; ?>"><? echo $mobo; ?> </option>
+	  <option ></option>
             
-			<?	$s1 = mysql_query("SELECT * FROM tbarang where idkategori='00001'  ");
-				if(mysql_num_rows($s1) > 0){
-			 while($datas1 = mysql_fetch_array($s1)){
-				$idbarang=$datas1['idbarang'];
-				$namabarang=$datas1['namabarang'];
-				$stock=$datas1['stock'];?>
-			 <option value="<? echo $namabarang; ?>"> <? echo $namabarang; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		// Query untuk mengambil data dari tabel tbarang
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00001' AND stock > 0";
+		$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+		// Periksa apakah query berhasil
+		if ($result === false) {
+			die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+		}
+
+		// Iterasi data hasil query
+		while ($datas1 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+			$idbarang = $datas1['idbarang'];
+			$namabarang = $datas1['namabarang'];
+			$stock = $datas1['stock'];
+		?>
+			<option value="<?php echo $idbarang; ?>"><?php echo $namabarang; ?></option>
+		<?php } ?>
 			
     
         </select> 
@@ -405,17 +525,25 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
  <div class="form-group">
  <b>Prosesor</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
       <select class="form-control" name='prosesor'>
-	  <option value="<? echo $prosesor; ?>"><? echo $prosesor; ?> </option>
+	  <option> </option>
             
-			<?	$s2 = mysql_query("SELECT * FROM tbarang where idkategori='00002' ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$idbarang2=$datas2['idbarang'];
-				$namabarang2=$datas2['namabarang'];?>
-			 <option value="<? echo $namabarang2; ?>"> <? echo $namabarang2; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		// Query untuk mengambil data dari tabel tbarang
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00002' AND stock > 0";
+		$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+		// Periksa apakah query berhasil
+		if ($result === false) {
+			die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+		}
+
+		// Iterasi data hasil query
+		while ($datas2 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+			$idbarang2 = $datas2['idbarang'];
+			$namabarang2 = $datas2['namabarang'];
+		?>
+			<option value="<?php echo $idbarang2; ?>"><?php echo $namabarang2; ?></option>
+		<?php } ?>
 			
     
         </select> 
@@ -423,41 +551,57 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
                                     
                                         </div>
  
-   <div class="form-group">
- <b>Power Supply</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
+   	<div class="form-group">
+ 	<b>Power Supply</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>          
       <select class="form-control" name='powersuply'>
-	  <option value="<? echo $powersuply; ?>"><? echo $powersuply; ?> </option>
+	  <option > </option>
             
-			<?	$s3 = mysql_query("SELECT * FROM tbarang where idkategori='00003' ");
-				if(mysql_num_rows($s3) > 0){
-			 while($datas3 = mysql_fetch_array($s3)){
-				$idbarang3=$datas3['idbarang'];
-				$namabarang3=$datas3['namabarang'];?>
-			 <option value="<? echo $namabarang3; ?>"> <? echo $namabarang3; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		// Query untuk mengambil data dari tabel tbarang
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00003' AND stock > 0";
+		$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+		// Periksa apakah query berhasil
+		if ($result === false) {
+			die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+		}
+
+		// Iterasi data hasil query
+		while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+			$idbarang3 = $datas3['idbarang'];
+			$namabarang3 = $datas3['namabarang'];
+		?>
+			<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+		<?php } ?>
 			
     
         </select> 
                                         
                                     
-                                        </div>
+    </div>
 
    <div class="form-group">
  <b>Cassing</b><font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>           
       <select class="form-control" name='cassing' >
-	  <option value="<? echo $cassing; ?>"><? echo $cassing; ?> </option>
+	  <option > </option>
             
-			<?	$s4 = mysql_query("SELECT * FROM tbarang where idkategori='00004'  ");
-				if(mysql_num_rows($s4) > 0){
-			 while($datas4 = mysql_fetch_array($s4)){
-				$idbarang4=$datas4['idbarang'];
-				$namabarang4=$datas4['namabarang'];?>
-			 <option value="<? echo $namabarang4; ?>"> <? echo $namabarang4; ?>
-			 </option>
-			 
-			 <?}}?>
+	  <?php
+		// Query untuk mengambil data dari tabel tbarang
+		$query = "SELECT * FROM tbarang WHERE idkategori = '00004' AND stock > 0";
+		$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+		// Periksa apakah query berhasil
+		if ($result === false) {
+			die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+		}
+
+		// Iterasi data hasil query
+		while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+			$idbarang3 = $datas3['idbarang'];
+			$namabarang3 = $datas3['namabarang'];
+		?>
+        <option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+    	<?php } ?>
 			
     
         </select> 
@@ -468,43 +612,64 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 	<div class="form-group">
  <b>DVD Internal</b> <font color=red>Tidak Merubah Stock Hanya Mengganti Nama</font>         
       <select class="form-control" name='dvd' >
-	  <option value="<? echo $dvd; ?>" ><? echo $dvd; ?> </option>
+	  <option > </option>
             
-			<?	$s6 = mysql_query("SELECT * FROM tbarang where idkategori='00008' ");
-				if(mysql_num_rows($s6) > 0){
-			 while($datas6 = mysql_fetch_array($s6)){
-				$idbarang6=$datas6['idbarang'];
-				$namabarang6=$datas6['namabarang'];?>
-			 <option value="<? echo $namabarang6; ?>"> <? echo $namabarang6; ?>
-			 </option>
-			 
-			 <?}}?>
+	  		<?php
+			// Query untuk mengambil data dari tabel tbarang
+			$query = "SELECT * FROM tbarang WHERE idkategori = '00008' AND stock > 0";
+			$result = sqlsrv_query($conn, $query); // Eksekusi query menggunakan sqlsrv_query
+
+			// Periksa apakah query berhasil
+			if ($result === false) {
+				die(print_r(sqlsrv_errors(), true)); // Tampilkan error jika query gagal
+			}
+
+			// Iterasi data hasil query
+			while ($datas3 = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+				$idbarang3 = $datas3['idbarang'];
+				$namabarang3 = $datas3['namabarang'];
+			?>
+				<option value="<?php echo $idbarang3; ?>"><?php echo $namabarang3; ?></option>
+			<?php } ?>
 			
     
         </select> 
                                         
                                     
                                         </div>
-										 <div class="form-group">
- Bulan Perawatan         
-      <select  class="form-control" name='bulan' >	 <option value=<? echo $id_bulan; ?>><? echo $namabulan; ?> </option>
-            
-			<?	$s2 = mysql_query("SELECT * FROM bulan  ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$id_bulan=$datas2['id_bulan'];
-				$bulan=$datas2['bulan'];
-				?>
-			 <option value="<? echo $id_bulan; ?>"> <? echo $bulan; ?>
-			 </option>
-			 
-			 <?}}?>
+	<div class="form-group">
+ 		Bulan Perawatan         
+		 <select class="form-control" name="bulan">
+			<option ></option>
+			<?php
+			include('../config.php');
 			
-    
-        </select>        
+			$query = "SELECT * FROM bulan";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$id_bulan = $row['id_bulan'];
+					$bulan = $row['bulan'];
+					?>
+					<option value="<?php echo $id_bulan; ?>"><?php echo $bulan; ?></option>
+					<?php
+				}
+			} else {
+				// Tangkap error jika query gagal
+				$errors = sqlsrv_errors();
+				foreach ($errors as $error) {
+					echo "SQLSTATE: " . $error['SQLSTATE'] . "<br />";
+					echo "Code: " . $error['code'] . "<br />";
+					echo "Message: " . $error['message'] . "<br />";
+				}
+			}
+			?>
+		</select>
+       
                                     
                                         </div>	
-   <input  class="form-control"  type="hidden" name="nomor" value="<? echo $nomor; ?>" >
+   <input  class="form-control"  type="hidden" name="nomor" value="<?php echo $nomor; ?>" >
  <button  name="tombol"  class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
 
 

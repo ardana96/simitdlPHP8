@@ -1,22 +1,36 @@
 <?php
 include('../config.php');
-if(isset($_POST['tombol'])){
-$nomor=$_POST['nomor'];
-$status=$_POST['status'];
-$ket=$_POST['ket'];
-$qty=$_POST['qty'];
-$keterangan=$_POST['keterangan'];
 
-$tgl=$_POST['tgl'];
-$nama=$_POST['nama'];
-$bagian=$_POST['bagian'];
-$divisi=$_POST['divisi'];
-$namabarang=$_POST['namabarang'];
+if (isset($_POST['tombol'])) {
+    $nomor = trim($_POST['nomor']);
+    $status = $_POST['status'];
+    $ket = $_POST['ket'];
+    $qty = $_POST['qty'];
+    $keterangan = $_POST['keterangan'];
 
-$query_update="UPDATE permintaan SET tgl= '".$tgl."',nama= '".$nama."',bagian= '".$bagian."',divisi= '".$divisi."',namabarang= '".$namabarang."',qty= '".$qty."',status= '".$status."',keterangan= '".$keterangan."',ket= '".$ket."' WHERE nomor='".$nomor."'";	
-$update=mysql_query($query_update);
-if($update){
-header("location:../user.php?menu=permintaan&stt= Update Berhasil");}
-else{
-header("location:../user.php?menu=permintaan&stt=gagal");}}
+    $tgl = $_POST['tgl'];
+    $nama = $_POST['nama'];
+    $bagian = $_POST['bagian'];
+    $divisi = $_POST['divisi'];
+    $namabarang = $_POST['namabarang'];
+
+    // Query update
+    $query_update = "UPDATE permintaan 
+                     SET tgl = ?, nama = ?, bagian = ?, divisi = ?, namabarang = ?, qty = ?, status = ?, keterangan = ?, ket = ? 
+                     WHERE nomor = ?";
+                     
+    // Parameter untuk query
+    $params = [$tgl, $nama, $bagian, $divisi, $namabarang, $qty, $status, $keterangan, $ket, $nomor];
+    
+    // Eksekusi query
+    $stmt = sqlsrv_query($conn, $query_update, $params);
+
+    if ($stmt) {
+        header("location:../user.php?menu=permintaan&stt= Update Berhasil");
+    } else {
+        // Menampilkan pesan error jika query gagal
+        echo "Error in query preparation/execution: ";
+        die(print_r(sqlsrv_errors(), true));
+    }
+}
 ?>

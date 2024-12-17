@@ -9,58 +9,74 @@ document.onkeypress = dontEnter;
 
 </script>
 <?php
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('config.php');
 ?>
-<?
-	if(isset($_POST['nomor'])){
-$nomor=$_POST['nomor'];
-$lihat=mysql_query("select * from pcaktif where nomor='$nomor'");
-  while($result=mysql_fetch_array($lihat)){
-	  $nomor=$result['nomor'];
-	 $user=$result['user'];
-	 $divisi=$result['divisi'];
-$bagian=$result['bagian'];
-$subbagian=$result['subbagian'];
-$lokasi=$result['lokasi'];
-$id_bulan=$result['id_bulan'];
-$id_bagian=$result['id_bagian'];
-$idpc=$result['idpc'];
-$ippc=$result['ippc'];
-$os=$result['os'];
-$prosesor=$result['prosesor'];
-$mobo=$result['mobo'];
-$monitor=$result['monitor'];
-$ram=$result['ram'];
-$harddisk=$result['harddisk'];
-$jumlah=$result['jumlah'];
-$tgl_update=$result['tgl_update'];
-$bulan=$result['bulan'];
-$tgl_masuk=$result['tgl_masuk'];
-$ram1=$result['ram1'];
-$ram2=$result['ram2'];
-$hd1=$result['hd1'];
-$hd2=$result['hd2'];
-$namapc=$result['namapc'];
-$powersuply=$result['powersuply'];
-$cassing=$result['cassing'];
-$dvd=$result['dvd'];
-$model=$result['model'];
-$sqlll = mysql_query("SELECT * FROM bulan where id_bulan='$bulan' ");
-			while($dataa = mysql_fetch_array($sqlll)){
-			$namabulan=$dataa['bulan'];}
-	}}	  
+<?php
+if (isset($_POST['nomor'])) {
+    $nomor = $_POST['nomor'];
+    
+    $query = "SELECT * FROM pcaktif WHERE nomor = ?";
+    $params = [$nomor];
+    $stmt = sqlsrv_query($conn, $query, $params);
 
+    if ($stmt !== false) {
+        while ($result = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $nomor = $result['nomor'];
+            $user = $result['user'];
+            $divisi = $result['divisi'];
+            $bagian = $result['bagian'];
+            $subbagian = $result['subbagian'];
+            $lokasi = $result['lokasi'];
+            //$id_bulan = $result['id_bulan'];
+           // $id_bagian = $result['id_bagian'];
+            $idpc = $result['idpc'];
+            $ippc = $result['ippc'];
+            $os = $result['os'];
+            $prosesor = $result['prosesor'];
+            $mobo = $result['mobo'];
+            $monitor = $result['monitor'];
+            $ram = $result['ram'];
+            $harddisk = $result['harddisk'];
+            $jumlah = $result['jumlah'];
+            $tgl_update = $result['tgl_update'];
+            $bulan = $result['bulan'];
+            $tgl_masuk = $result['tgl_masuk'];
+            $ram1 = $result['ram1'];
+            $ram2 = $result['ram2'];
+            $hd1 = $result['hd1'];
+            $hd2 = $result['hd2'];
+            $namapc = $result['namapc'];
+            $powersuply = $result['powersuply'];
+            $cassing = $result['cassing'];
+            $dvd = $result['dvd'];
+            $model = $result['model'];
 
+            // Mengambil data bulan
+            $query_bulan = "SELECT * FROM bulan WHERE id_bulan = ?";
+            $params_bulan = [$bulan];
+            $stmt_bulan = sqlsrv_query($conn, $query_bulan, $params_bulan);
+
+            if ($stmt_bulan !== false) {
+                while ($dataa = sqlsrv_fetch_array($stmt_bulan, SQLSRV_FETCH_ASSOC)) {
+                    $namabulan = $dataa['bulan'];
+                }
+            } else {
+                echo "Error mengambil data bulan.<br>";
+            }
+        }
+    } else {
+        echo "Error mengambil data PC aktif.<br>";
+        if (($errors = sqlsrv_errors()) != null) {
+            foreach ($errors as $error) {
+                echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+                echo "Code: " . $error['code'] . "<br>";
+                echo "Message: " . $error['message'] . "<br>";
+            }
+        }
+    }
+}
 ?>
+
 
 
 <script language="JavaScript" type="text/javascript" src="suggest.js"></script>
@@ -71,31 +87,75 @@ border:1px;
 	background-color: #FFF;}
 </style>
 
-<?
-$datee=date('20y-m-d');
+<?php
+$datee=date('Y-m-d');
  $jam = date("H:i");
-$date=date('ymd');
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+$date=date('Y-m-d');
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }
 $no_faktur=kdauto("tpengambilan",'');
 ?>
@@ -172,7 +232,7 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 
 
 
-      <form id="form_penjualan"  method="post" action="aplikasi/updateperawatanpc.php" enctype="multipart/form-data" name="postform2" >
+    <form id="form_penjualan"  method="post" action="aplikasi/updateperawatanpc.php" enctype="multipart/form-data" name="postform2" >
 	   <div class="form-group">
 Tanggal Perawatan <br>
                                             
@@ -182,91 +242,141 @@ Tanggal Perawatan <br>
 
 							
 				 </div>	
-								   <div class="form-group">
- Bulan Perawatan         
-      <select  class="form-control" name='bulan' required='required' >	 <option value=<? echo $id_bulan; ?>><? echo $namabulan; ?> </option>
-            
-			<?	$s2 = mysql_query("SELECT * FROM bulan  ");
-				if(mysql_num_rows($s2) > 0){
-			 while($datas2 = mysql_fetch_array($s2)){
-				$id_bulan=$datas2['id_bulan'];
-				$bulan=$datas2['bulan'];
-				?>
-			 <option value="<? echo $id_bulan; ?>"> <? echo $bulan; ?>
-			 </option>
-			 
-			 <?}}?>
+	<div class="form-group">
+		Bulan Perawatan         
+		<select class="form-control" name='bulan' required='required'>
+			<option value="<?php echo $id_bulan; ?>"><?php echo $namabulan; ?></option>
 			
-    
-        </select> 
-                               
-                                        
-                                    
-                                        </div>	
+			<?php
+			$query = "SELECT * FROM bulan";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas2 = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$id_bulan = $datas2['id_bulan'];
+					$bulan = $datas2['bulan'];
+					?>
+					<option value="<?php echo $id_bulan; ?>"><?php echo $bulan; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
+		</select>                                
+    </div>	
 							
- Bagian                                      
-        <select class="form-control" name='bagian' required='required'> <option value=<? echo $bagian; ?> ><? echo $bagian; ?></option>
-            
-			<?	$s = mysql_query("SELECT * FROM bagian_pemakai order by bag_pemakai asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$id_bag_pemakai=$datas['id_bag_pemakai'];
-				$bag_pemakai=$datas['bag_pemakai'];?>
-	
-	<option value="<? echo $bag_pemakai; ?>"> <? echo $bag_pemakai; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select>
+ 		Bagian                                      
+		<select class="form-control" name='bagian' required='required'>
+			<option value="<?php echo $bagian; ?>"><?php echo $bagian; ?></option>
+
+			<?php
+			$query = "SELECT * FROM bagian_pemakai ORDER BY bag_pemakai ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$id_bag_pemakai = $datas['id_bag_pemakai'];
+					$bag_pemakai = $datas['bag_pemakai'];
+					?>
+					<option value="<?php echo $bag_pemakai; ?>"><?php echo $bag_pemakai; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
+		</select>
+
 
         Sub Bagian                                      
-        <select class="form-control" name='subbagian' required='required'> 
-        	<option value=<? echo $subbagian; ?> ><? echo $subbagian; ?></option>
-            
-			<?	$s = mysql_query("SELECT * FROM sub_bagian order by subbag_nama asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$subbag_id=$datas['subbag_id'];
-				$subbag_nama=$datas['subbag_nama'];?>
-	
-			<option value="<? echo $subbag_nama; ?>"> <? echo $subbag_nama; ?>
-			 </option>
-			 
-			 <?}}?>
-        </select>
+        <select class="form-control" name='subbagian' required='required'>
+			<option value="<?php echo $subbagian; ?>"><?php echo $subbagian; ?></option>
+
+			<?php
+			$query = "SELECT * FROM sub_bagian ORDER BY subbag_nama ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$subbag_id = $datas['subbag_id'];
+					$subbag_nama = $datas['subbag_nama'];
+					?>
+					<option value="<?php echo $subbag_nama; ?>"><?php echo $subbag_nama; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
+		</select>
+
 
        Lokasi                                      
-        <select class="form-control" name='lokasi' required='required'> 
-        	<option value=<? echo $lokasi; ?> ><? echo $lokasi; ?></option>
-            
-			<?	$s = mysql_query("SELECT * FROM lokasi order by lokasi_nama asc");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$lokasi_id=$datas['lokasi_id'];
-				$lokasi_nama=$datas['lokasi_nama'];?>
-	
-			<option value="<? echo $lokasi_nama; ?>"> <? echo $lokasi_nama; ?>
-			 </option>
-			 
-			 <?}}?>
-        </select>
+	   <select class="form-control" name='lokasi' required='required'>
+			<option value="<?php echo $lokasi; ?>"><?php echo $lokasi; ?></option>
+
+			<?php
+			$query = "SELECT * FROM lokasi ORDER BY lokasi_nama ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt !== false) {
+				while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+					$lokasi_id = $datas['lokasi_id'];
+					$lokasi_nama = $datas['lokasi_nama'];
+					?>
+					<option value="<?php echo $lokasi_nama; ?>"><?php echo $lokasi_nama; ?></option>
+					<?php
+				}
+			} else {
+				echo "Error executing query.<br>";
+				if (($errors = sqlsrv_errors()) != null) {
+					foreach ($errors as $error) {
+						echo "SQLSTATE: " . $error['SQLSTATE'] . "<br>";
+						echo "Code: " . $error['code'] . "<br>";
+						echo "Message: " . $error['message'] . "<br>";
+					}
+				}
+			}
+			?>
+		</select>
+
 
 		User 
 		
                                             
-                                            <input  class="form-control"  type="text" name="user" value="<? echo $user; ?>">
+                                            <input  class="form-control"  type="text" name="user" value="<?php echo $user; ?>">
                                  
  ID Komputer
 		
                                             
-                                            <input  class="form-control"  type="text" name="idpc" value="<? echo $idpc; ?>" >
+                                            <input  class="form-control"  type="text" name="idpc" value="<?php echo $idpc; ?>" >
                                            
 Nama Komputer
 		
                                             
-                                            <input  class="form-control"  type="text" name="namapc" value="<? echo $namapc; ?>">   
+                                            <input  class="form-control"  type="text" name="namapc" value="<?php echo $namapc; ?>">   
                                     
 
                                            
@@ -286,100 +396,100 @@ Nama Komputer
 										
 
  <b> Divisi </b>                                    
-   <input  readonly class="form-control"  type="text" name="divisi" value="<? echo $divisi; ?>">	
+   <input  readonly class="form-control"  type="text" name="divisi" value="<?php echo $divisi; ?>">	
    							
 	   <div class="form-group">
  <b>Monitor </b>      
-           <input  readonly class="form-control"  type="text" name="monitor" value="<? echo $monitor; ?>" >
+           <input  readonly class="form-control"  type="text" name="monitor" value="<?php echo $monitor; ?>" >
                                         
                                     
                                         </div>
 											   <div class="form-group">
  <b>Model</b>      
-           <input  readonly class="form-control"  type="text" name="model" value="<? echo $model; ?>" >
+           <input  readonly class="form-control"  type="text" name="model" value="<?php echo $model; ?>" >
                                         
                                     
                                         </div>
 	   <div class="form-group">
  <b>Operation System</b>         
-        <input   readonly class="form-control"  type="text" name="os" value="<? echo $os; ?>" >
+        <input   readonly class="form-control"  type="text" name="os" value="<?php echo $os; ?>" >
                                         
                                     
                                         </div>	
 											   <div class="form-group">
  <b>IP Komputer</b>         
-        <input  readonly  class="form-control"  type="text" name="ippc"  value="<? echo $ippc; ?>">
+        <input  readonly  class="form-control"  type="text" name="ippc"  value="<?php echo $ippc; ?>">
                                         
                                     
                                         </div>
 						
 	                                       <div class="form-group">
  <b>Total Kapasitas Harddsik</b>         
-        <input readonly class="form-control"  type="text" name="harddisk" value="<? echo $harddisk; ?>">
+        <input readonly class="form-control"  type="text" name="harddisk" value="<?php echo $harddisk; ?>">
                                         </div>
                                     
  
 	   <div class="form-group">
  <b>Total Kapasitas RAM</b>         
-        <input  readonly class="form-control"  type="text" name="ram" value="<? echo $ram; ?>">
+        <input  readonly class="form-control"  type="text" name="ram" value="<?php echo $ram; ?>">
                                         
                                     
                                         </div>		
   <div class="form-group">
  <b>RAM Slot 1</b>         
-         <input  readonly class="form-control"  type="text" name="ram1" value="<? echo $ram1; ?>" >
+         <input  readonly class="form-control"  type="text" name="ram1" value="<?php echo $ram1; ?>" >
                                         
                                     
                                         </div>
   <div class="form-group">
  <b>RAM Slot 2</b>         
-          <input readonly class="form-control"  type="text" name="ram2" value="<? echo $ram2; ?>" >
+          <input readonly class="form-control"  type="text" name="ram2" value="<?php echo $ram2; ?>" >
                                         
                                     
                                         </div>
  <div class="form-group">
  <b>Harddisk Slot 1</b>         
-        <input readonly class="form-control"  type="text" name="hd1"  value="<? echo $hd1; ?>" >
+        <input readonly class="form-control"  type="text" name="hd1"  value="<?php echo $hd1; ?>" >
                                         
                                     
                                         </div>
   <div class="form-group">
  <b>Harddisk Slot 2</b>         
-         <input readonly class="form-control"  type="text" name="hd2" value="<? echo $hd2; ?>" >
+         <input readonly class="form-control"  type="text" name="hd2" value="<?php echo $hd2; ?>" >
                                         
                                     
                                         </div>										
 	 <div class="form-group">
  <b>Motherboard</b>         
-         <input readonly class="form-control"  type="text" name="mobo"  value="<? echo $mobo; ?>" >
+         <input readonly class="form-control"  type="text" name="mobo"  value="<?php echo $mobo; ?>" >
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>Prosesor</b>         
-         <input readonly class="form-control"  type="text" name="prosesor"  value="<? echo $prosesor; ?>" >
+         <input readonly class="form-control"  type="text" name="prosesor"  value="<?php echo $prosesor; ?>" >
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>Power Supply</b>         
-          <input readonly class="form-control"  type="text" name="powersuply" value="<? echo $powersuply; ?>" >
+          <input readonly class="form-control"  type="text" name="powersuply" value="<?php echo $powersuply; ?>" >
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>Cassing</b>         
-          <input readonly class="form-control"  type="text" name="cassing" value="<? echo $cassing; ?>" >
+          <input readonly class="form-control"  type="text" name="cassing" value="<?php echo $cassing; ?>" >
                                         
                                     
                                         </div>
    <div class="form-group">
  <b>DVD Internal</b>         
-          <input readonly class="form-control"  type="text" name="dvd" value="<? echo $dvd; ?>" >
+          <input readonly class="form-control"  type="text" name="dvd" value="<?php echo $dvd; ?>" >
                                         
                                     
                                         </div>
-   <input  class="form-control"  type="hidden" name="nomor" value="<? echo $nomor; ?>" >
+   <input  class="form-control"  type="hidden" name="nomor" value="<?php echo $nomor; ?>" >
  <button  name="tombol" id="button_selesai" class="btn text-muted text-center btn-danger" type="submit">Simpan</button>
 
 

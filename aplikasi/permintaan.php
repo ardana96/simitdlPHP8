@@ -1,4 +1,5 @@
-<?include('config.php');?>  
+<?php
+include('config.php');?>  
 <script language="javascript">
 function createRequestObject() {
 var ajax;
@@ -48,28 +49,72 @@ mywin=window.open("aplikasi/lap_permintaandetail.php?nomor=" + nomor ,"_blank",	
 
 
 </script>
-<?
-function kdauto($tabel, $inisial){
-	$struktur	= mysql_query("SELECT * FROM $tabel");
-	$field		= mysql_field_name($struktur,0);
-	$panjang	= mysql_field_len($struktur,0);
+<?php
+function kdauto($tabel, $inisial) {
+    global $conn; // Pastikan koneksi sqlsrv tersedia
 
- 	$qry	= mysql_query("SELECT max(".$field.") FROM ".$tabel);
- 	$row	= mysql_fetch_array($qry); 
- 	if ($row[0]=="") {
- 		$angka=0;
-	}
- 	else {
- 		$angka		= substr($row[0], strlen($inisial));
- 	}
-	
- 	$angka++;
- 	$angka	=strval($angka); 
- 	$tmp	="";
- 	for($i=1; $i<=($panjang-strlen($inisial)-strlen($angka)); $i++) {
-		$tmp=$tmp."0";	
-	}
- 	return $inisial.$tmp.$angka;
+    // Ambil nama kolom pertama dan panjang maksimum kolom
+  
+    $query_struktur = "
+    WITH ColumnInfo AS (
+        SELECT 
+            COLUMN_NAME,
+            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = ?
+    )
+    SELECT 
+        Columnlength AS TotalColumns,
+        COLUMN_NAME AS SecondColumnName
+    FROM ColumnInfo
+    WHERE RowNum = 2;
+    ";
+    $params_struktur = array($tabel);
+    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+
+    if ($stmt_struktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $field = null;
+    $maxLength = null; // Default jika tidak ditemukan panjang kolom
+    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+        $field = $row['SecondColumnName']; // Ambil nama kolom pertama
+        $maxLength = $row['TotalColumns'] ?? $maxLength;
+    }
+    sqlsrv_free_stmt($stmt_struktur);
+
+    if ($field === null) {
+        die("Kolom tidak ditemukan pada tabel: $tabel");
+    }
+
+    // Ambil nilai maksimum dari kolom tersebut
+    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+    $stmt_max = sqlsrv_query($conn, $query_max);
+
+    if ($stmt_max === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+
+    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+
+    $angka = 0;
+    if (!empty($row['maxKode'])) {
+        $angka = (int) substr($row['maxKode'], strlen($inisial));
+    }
+    $angka++;
+
+    sqlsrv_free_stmt($stmt_max);
+
+    // Tentukan padding berdasarkan panjang kolom
+    $padLength = $maxLength - strlen($inisial);
+    if ($padLength <= 0) {
+        die("Panjang padding tidak valid untuk kolom: $field");
+    }
+
+    // Menghasilkan kode baru
+    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT); // Misalnya SUPP0001
 }?>
             <div class="inner">
                 <div class="row">
@@ -120,44 +165,75 @@ function kdauto($tabel, $inisial){
                                         </tr>
                                     </thead>
                                     <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM permintaan where aktif='aktif' ");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
+                <?php 
+				// $sql = mysql_query("SELECT * FROM permintaan where aktif='aktif' ");
+				// if(mysql_num_rows($sql) > 0){
+				// while($data = mysql_fetch_array($sql)){
+
+				$query = "SELECT * FROM permintaan where aktif='aktif' ";
+				$stmt = sqlsrv_query($conn, $query);
+				
+				// Periksa apakah query berhasil
+				if ($stmt === false) {
+					die(print_r(sqlsrv_errors(), true));
+				}
+				
+				// Periksa apakah ada hasil
+				if (sqlsrv_has_rows($stmt)) {
+					while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 				$nomor=$data['nomor'];
-				$tgl=$data['tgl'];
+				$tgl=$data['tgl'] ? $data['tgl']->format('d/m/Y') : '';
 				$nama=$data['nama'];
 				$bagian=$data['bagian'];
 				$divisi=$data['divisi'];
 				$namabarang=$data['namabarang'];
 				$qty=$data['qty'];
-				$masuk=$data['qtymasuk'];
+				//$masuk=$data['qtymasuk'];
 				$keterangan=$data['keterangan'];
 				$status=$data['status'];
-				$tgl2=$data['tgl2'];
+				//$tgl2=$data['tgl2'];
 				
-				$cek=mysql_query("select sum(qtymasuk) as totalmasuk,sum(qtykeluar) as totalkeluar from rincipermintaan where nomor='".$nomor."' ");
-	  while($result=mysql_fetch_array($cek)){
-	  $totalmasuk=$result['totalmasuk'];
-	  $totalkeluar=$result['totalkeluar'];
+	// $cek=mysql_query("select sum(qtymasuk) as totalmasuk,sum(qtykeluar) as totalkeluar from rincipermintaan where nomor='".$nomor."' ");
+	//   while($result=mysql_fetch_array($cek)){
+	//   $totalmasuk=$result['totalmasuk'];
+	//   $totalkeluar=$result['totalkeluar'];
 	
-	  }
-	  $sisa=$qty-$totalmasuk; 
-	    $refresh = mysql_query("update permintaan set sisa='".$sisa."' where nomor='".$nomor."'  ");
+	//   }
+		//echo $nomor;
+	  	$sql = "SELECT SUM(qtymasuk) AS totalmasuk, SUM(qtykeluar) AS totalkeluar FROM rincipermintaan WHERE nomor = ?";
+		$params = [$nomor]; // Gunakan prepared statement untuk keamanan
+		$stmttotal = sqlsrv_query($conn, $sql, $params);
+
+		if ($stmttotal === false) {
+			die(print_r(sqlsrv_errors(), true)); // Debugging jika terjadi error
+		}
+
+		while ($result = sqlsrv_fetch_array($stmttotal, SQLSRV_FETCH_ASSOC)) {
+			$totalmasuk = $result['totalmasuk'];
+			$totalkeluar = $result['totalkeluar'];
+		}
+	  	$sisa=$qty-$totalmasuk; 
+	    //$refresh = mysql_query("update permintaan set sisa='".$sisa."' where nomor='".$nomor."'  ");
+		$sql = "UPDATE permintaan SET sisa = ? WHERE nomor = ?";
+			$params = [$sisa, $nomor];
+
+			// Eksekusi query menggunakan sqlsrv_query
+			$stmtupdate = sqlsrv_query($conn, $sql, $params);
 	  
 				?>
 				
                                         <tr class="gradeC">
-                                            <td><? echo $tgl ?></td>
-											   <td><? echo $nama ?></td>
-                                            <td><? echo $bagian ?></td>
-                                            <td><? echo $divisi ?></td>
-											<td><? echo $namabarang ?></td>
-											<td><? echo $qty?></td>
-											<td><? echo $keterangan ?></td>
-											<td><? echo $status ?></td>
-											<td><? echo $totalmasuk ?></td>
-											<td><? echo $totalkeluar ?></td>
-											<td><? echo $qty-$totalmasuk ?></td>
+                                            <td><?php echo $tgl ?></td>
+											   <td><?php echo $nama ?></td>
+                                            <td><?php echo $bagian ?></td>
+                                            <td><?php echo $divisi ?></td>
+											<td><?php echo $namabarang ?></td>
+											<td><?php echo $qty?></td>
+											<td><?php echo $keterangan ?></td>
+											<td><?php echo $status ?></td>
+											<td><?php echo $totalmasuk ?></td>
+											<td><?php echo $totalkeluar ?></td>
+											<td><?php echo $qty-$totalmasuk ?></td>
 											<td align="center">
 				<button class="btn btn-primary" value="<?php echo $nomor; ?>" onclick="popup(this.value)" name='tombol'>
                                 Detail
@@ -184,7 +260,7 @@ function kdauto($tabel, $inisial){
 										 <td><? echo $nomor ?></td>
                                             
                                         </tr>
-                <?}}?>                      
+                <?php }}?>                      
                                     </tbody>
                                 </table>
                             </div>
@@ -219,7 +295,7 @@ Tanggal
 			               
 				 </div>	
 Nomor
-				  <input class="form-control" type="text" name="nomor" value="<? echo kdauto("permintaan",""); ?>" readonly>
+				  <input class="form-control" type="text" name="nomor" value="<?php echo kdauto("permintaan",""); ?>" readonly>
 				 <br>
 				 <div class="form-group">
          Nama Peminta                                   
@@ -229,21 +305,30 @@ Nomor
 											
 <div class="form-group">
                                            
-Bagian                                         
+		Bagian                                         
         <select class="form-control" name='bagian' required="required">
-             <option ></option>
-			<?	$s = mysql_query("SELECT * FROM bagian order by bagian asc ");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$id_bagian=$datas['id_bagian'];
-				$bagian=$datas['bagian'];?>
-			 <option value="<? echo $bagian; ?>"> <? echo $bagian; ?>
-			 </option>
-			 
-			 <?}}?>
-			
-    
-        </select>
+			<option></option>
+			<?php
+			// Query untuk mendapatkan data dari tabel bagian
+			$sql = "SELECT * FROM bagian ORDER BY bagian ASC";
+			$stmt = sqlsrv_query($conn, $sql);
+
+			// Periksa jika ada kesalahan pada eksekusi query
+			if ($stmt === false) {
+				die(print_r(sqlsrv_errors(), true));
+			}
+
+			// Loop untuk mengambil setiap data dan menampilkan dalam tag <option>
+			while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+				$id_bagian = $datas['id_bagian'];
+				$bagian = $datas['bagian'];
+				?>
+				<option value="<?php echo $bagian; ?>"><?php echo $bagian; ?></option>
+				<?php
+			}
+			?>
+		</select>
+
                                     
                                         </div>	
 	
@@ -329,20 +414,30 @@ Divisi
 <div class="form-group">
                                            
 Bagian                                         
-        <select class="form-control" name='bagian' id='bagian' required="required">
-             <option ></option>
-			<?	$s = mysql_query("SELECT * FROM bagian order by bagian asc ");
-				if(mysql_num_rows($s) > 0){
-			 while($datas = mysql_fetch_array($s)){
-				$id_bagian=$datas['id_bagian'];
-				$bagian=$datas['bagian'];?>
-			 <option value="<? echo $bagian; ?>"> <? echo $bagian; ?>
-			 </option>
-			 
-			 <?}}?>
+		<select class="form-control" name='bagian' id='bagian' required="required">
 			
-    
-        </select>
+			<?php
+			// Query untuk mengambil data bagian
+			$query = "SELECT * FROM bagian ORDER BY bagian ASC";
+			$stmt = sqlsrv_query($conn, $query);
+
+			if ($stmt === false) {
+				// Handle error jika query gagal
+				die(print_r(sqlsrv_errors(), true));
+			}
+
+			// Loop melalui hasil query dan buat opsi dropdown
+			while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+				$id_bagian = $row['id_bagian'];
+				$bagian = $row['bagian'];
+				echo "<option value='$bagian'>$bagian</option>";
+			}
+
+			// Bebaskan statement resources
+			sqlsrv_free_stmt($stmt);
+			?>
+		</select>
+
                                     
                                         </div>	
 	
