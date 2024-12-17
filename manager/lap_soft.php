@@ -1,6 +1,6 @@
 <?php
 require('kop_software.php');
-
+include('../config.php');
  
 function GenerateWord()
 {
@@ -92,6 +92,31 @@ function selisihHari($tglAwal, $tglAkhir){
 	return $selisihTotal;
 }
 
+function countWorkDays($start_date, $end_date) {
+    // Konversi tanggal ke format DateTime
+    $start = new DateTime($start_date);
+    $end = new DateTime($end_date);
+
+    // Pastikan tanggal akhir lebih besar dari tanggal awal
+    if ($start > $end) {
+        return 0;
+    }
+
+    $workDays = 0;
+
+    // Iterasi dari tanggal awal ke tanggal akhir
+    while ($start <= $end) {
+        // Cek jika hari bukan Sabtu (6) atau Minggu (0)
+        if ($start->format('N') < 6) { // N memberikan angka 1-7 untuk Senin-Minggu
+            $workDays++;
+        }
+        // Tambahkan 1 hari
+        $start->modify('+1 day');
+    }
+
+    return $workDays;
+}
+
 
 $pdf=new PDF ('L');
 $pdf->AddPage();
@@ -100,17 +125,11 @@ $pdf->SetFont('Arial','',8);
 $pdf->SetWidths(array(7,17,17,19,17,40,50,17,22,15,19, 19, 18));
 //srand(microtime()*1000000);
 
-//koneksi ke database
-mysql_connect("localhost","root","dlris30g");
-mysql_select_db("sitdl");
-$status=$_POST['status'];
+
 $bln_akhir=$_POST['bln_akhir'];
 $thn_akhir=$_POST['thn_akhir'];
-$tanggal_akhir=$thn_akhir.$bln_akhir.$tgl_akhir;
-$tanggal_akhir_format=$bln_akhir."-".$thn_akhir;
 
-//mengambil data dari tabel
- $sql=mysql_query("SELECT software.*,divisi.*,
+$sql= "SELECT software.*,divisi.*,
  CASE svc_kat
 WHEN 'LOW' THEN 1
 WHEN 'MEDIUM' THEN 2
@@ -120,43 +139,24 @@ ELSE 0
 END
  AS angka
 
- from software,divisi where status='Selesai' And cetak<>'T' and software.divisi=divisi.kd AND tgl like '%".$tanggal_akhir_format."' order by angka desc, tgl");
- 
- // $sql=mysql_query(" 
-// SELECT * FROM (SELECT 
-// @row_number:=CASE
-        // WHEN @kat_no = svc_kat 
-			// THEN @row_number + 1
-        // ELSE 0
-    // END AS kat_num,
-    // @kat_no:=svc_kat kat, data1.* FROM (
+ from software,divisi where  
+ status='Selesai' 
+ And software.divisi=divisi.kd 
+ AND MONTH(tgl) = '".$bln_akhir."'
+AND YEAR(tgl) = '".$thn_akhir."'
+ order by angka desc, tgl";
 
+$stmt = sqlsrv_query($conn, $sql);
 
-
-
-// SELECT software.*,divisi.*,
-// CASE svc_kat
-// WHEN 'LOW' THEN 1
-// WHEN 'MEDIUM' THEN 2
-// WHEN 'HIGH' THEN 3
-// WHEN 'URGENT' THEN 4
-// ELSE 0
-// END
- // AS angka
-
- // FROM software,divisi WHERE STATUS='Selesai' AND cetak<>'T' AND software.divisi=divisi.kd AND tgl LIKE '%10-2022' ORDER BY angka DESC, tgl ) AS data1) AS data2");
-$count=mysql_num_rows($sql);
-
-
-for($i=0;$i<$count;$i++);{
-while ($database = mysql_fetch_array($sql)) {
+$no = 0;
+while ($database = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 $no = $no+1;
 //$number = $database['kat_num'];
-$tgl=$database['tgl'];
+$tgl=$database['tgl'] ? $database['tgl']->format('d-m-Y') : '';
 $nama=$database['nama'];
 $bagian=$database['bagian'];
-$barang=$database['barang'];
-$tgl2=$database['tgl2'];
+//$barang=$database['barang'];
+$tgl2=$database['tgl2']? $database['tgl2']->format('d-m-Y') : '';
 $divisi=$database['namadivisi'];
 $kasus=$database['kasus'];
 $penerima=$database['penerima'];
@@ -164,17 +164,15 @@ $teknisi=$database['oleh'];
 $tindakan=$database['tindakan'];
 $status=$database['status'];
 $ippc=$database['ippc'];
-$perangkat=$database['perangkat'];
+//$perangkat=$database['perangkat'];
 $kategori = $database['svc_kat'];
 $awal=substr($tgl,0,2);
 $akhir=substr($tgl2,0,2);
-$semua=$hbulan;
-$bulan_awal=substr($tgl,3,2);
-$bulan_akhir=substr($tgl2,3,2);
-$total_bulan=$bulan_akhir-$bulan_awal;
-$hbulan=$total_bulan*30+$akhir-$awal;
-$tglRequest = $database['tglRequest'];
-$tglApprove = $database['tglapprove'];
+
+
+
+$tglRequest = $database['tglRequest'] ? $database['tgl2']->format('d-m-Y') : '';
+$tglApprove = $database['tglapprove'] ? $database['tgl2']->format('d-m-Y') : '';
 //$tanggal1 = new DateTime($tgl);
 //$tanggal2 = new DateTime($tgl2);
 
@@ -246,7 +244,7 @@ $durasi = 0;
 if($tglRequest == ""|| $tglRequest == null){
 	$durasi = 0;
 }else{
-	$durasi = selisihHari($tglRequest,$tgl2);
+	$durasi = countWorkDays($tglRequest,$tgl2);
 	//$durasi = 2;
 }
 
@@ -254,15 +252,15 @@ $durasiTunggu = 0;
 if($tglApprove == ""|| $tglApprove == null){
 	$durasiTunggu = 0;
 }else{
-	$durasiTunggu = selisihHari($tglApprove,$tgl2);
+	$durasiTunggu = countWorkDays($tglApprove,$tgl2);
 	//$durasi = 2;
 }
 
 
 //$pdf->Row(array($tgl,$namabesar."\n".$bagian."\n".$divisi,$kasus,$penerimabesar,$statusbesar."-".$teknisibesar."\n"."(".$tgl2.")",$hbulan."hr"));
-$pdf->Row(array($no,$tglRequest , $tglApprove, $tgl, $tgl2, $namabesar."\n".$bagian.' - '.$divisi,$kasus,$penerimabesar,$tindakan,  $kategori_text, selisihHari($tgl,$tgl2)." hr", $durasi." hr",$durasiTunggu." hr"));
+$pdf->Row(array($no,$tglRequest , $tglApprove, $tgl, $tgl2, $namabesar."\n".$bagian.' - '.$divisi,$kasus,$penerimabesar,$tindakan,  $kategori_text, countWorkDays($tgl,$tgl2)." hr", $durasi." hr",$durasiTunggu." hr"));
 
 
-}}
+}
 $pdf->Output();
 ?>

@@ -64,8 +64,8 @@ $query = "
         d.rutin = 'rutin' AND 
         b.status <> 'perakitan' AND 
         a.bagian <> 'B079' 
-        AND MONTH(a.tgl) = '".$bln_akhir."'
-		AND YEAR(a.tgl) = '".$thn_akhir."'
+        AND MONTH(a.tglambil) = '".$bln_akhir."'
+		AND YEAR(a.tglambil) = '".$thn_akhir."'
     ORDER BY a.tglambil ASC
 ";
 

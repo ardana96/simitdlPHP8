@@ -334,8 +334,8 @@ $tgll=date('20y-01-01');
                         <li><a href="#" onclick="popup_print(13)"><i class="icon-angle-right"></i>  Service Luar</a></li>
                         <li><a href="#" onclick="popup_print(20)"><i class="icon-angle-right"></i>  Software</a></li>
         		<!-- <li><a href="#" onclick="popup_print(6)"><i class="icon-angle-right"></i> Peminjaman</a></li>-->
-                        <li><a href="#" onclick="popup_print(9)"><i class="icon-angle-right"></i>  Jadwal Perawatan V1</a></li>
-						<li><a href="#" onclick="popup_print(27)"><i class="icon-angle-right"></i>  Jadwal Perawatan V2</a></li>
+                        <!-- <li><a href="#" onclick="popup_print(9)"><i class="icon-angle-right"></i>  Jadwal Perawatan V1</a></li>
+						<li><a href="#" onclick="popup_print(27)"><i class="icon-angle-right"></i>  Jadwal Perawatan V2</a></li> -->
 						<li class="">
 							<a href="#" data-parent="#chart-nav" data-toggle="collapse" class="accordion-toggle" data-target="#lit-nav">
 								<i class="icon-angle-right"></i> <b>Jadwal Perawatan</b>

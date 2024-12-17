@@ -1,5 +1,6 @@
 <?php
 require('mc_table.php');
+include('../config.php');
 
  
 function GenerateWord()
@@ -31,44 +32,55 @@ $pdf->SetWidths(array(7,25,65,65,25));
 //srand(microtime()*1000000);
 
 //koneksi ke database
-mysql_connect("localhost","root","dlris30g");
-mysql_select_db("sitdl");
-$status=$_POST['status'];
+
+//$status=$_POST['status'];
 $bln_akhir=$_POST['bln_akhir'];
 $thn_akhir=$_POST['thn_akhir'];
-$tanggal_akhir=$thn_akhir.$bln_akhir.$tgl_akhir;
-$tanggal_akhir_format=$thn_akhir."-".$bln_akhir;
+
  
-//mengambil data dari tabel
-$sql=mysql_query("SELECT * from tpinjam,trincipinjam,bagian where tpinjam.nopinjam=trincipinjam.nopinjam and tpinjam.bagian=bagian.id_bagian
-and tpinjam.tgl1 like '".$tanggal_akhir_format."%'  order by tpinjam.tgl1 ");
-$count=mysql_num_rows($sql);
-for($i=0;$i<$count;$i++);{
-while ($database = mysql_fetch_array($sql)) {
-$no =$no+1;
-$tgl1=$database['tgl1'];
-$nama=$database['nama'];
-$bagian=$database['bagian'];
-$barang=$database['namabarang'];
-$tgl2=$database['tgl2'];
-$divisi=$database['divisi'];
-$telp=$database['telp'];
+// Query SQL Server
+$sql = "SELECT tpinjam.tgl1, trincipinjam.tgl2, tpinjam.telp, trincipinjam.namabarang, 
+               tpinjam.nama, bagian.bagian, tpinjam.divisi
+        FROM tpinjam
+        INNER JOIN trincipinjam ON tpinjam.nopinjam = trincipinjam.nopinjam
+        INNER JOIN bagian ON tpinjam.bagian = bagian.id_bagian
+        WHERE 
 
-$namabesar=strtoupper($nama);
-$barangbesar=strtoupper($barang);
-$tahun=substr($tgl1,0,4);
-$bulan=substr($tgl1,-5,2);
-$tanggal=substr($tgl1,-2,2);
-$tglbaru=$tanggal.'-'.$bulan.'-'.$tahun;
+		MONTH(tpinjam.tgl1) = '".$bln_akhir."'
+		AND YEAR(tpinjam.tgl1) = '".$thn_akhir."'
+        ORDER BY tpinjam.tgl1";
 
-$tahun2=substr($tgl2,0,4);
-$bulan2=substr($tgl2,-5,2);
-$tanggal2=substr($tgl2,-2,2);
-$tglbaru2=$tanggal2.'-'.$bulan2.'-'.$tahun2;
+//$params = array($tanggal_akhir_format . '%');
+$stmt = sqlsrv_query($conn, $sql);
 
-$pdf->Row(array($no, $tglbaru,$namabesar."\n".$bagian.' - '.$divisi,$barangbesar,$telp));
+if ($stmt === false) { 	
+    die(print_r(sqlsrv_errors(), true));
+}
 
-}}
+// Pengambilan data dari query
+$no = 0;
+while ($database = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $no++;
+    $tgl1 = $database['tgl1']->format('Y-m-d');
+    $tgl2 = $database['tgl2']->format('Y-m-d');
+    $nama = strtoupper($database['nama']);
+    $bagian = $database['bagian'];
+    $divisi = $database['divisi'];
+    $barang = strtoupper($database['namabarang']);
+    $telp = $database['telp'];
+
+    // Format tanggal
+    $tglbaru = date("d-m-Y", strtotime($tgl1));
+    $tglbaru2 = date("d-m-Y", strtotime($tgl2));
+
+    // Tambahkan data ke dalam PDF
+    $pdf->Row(array($no, $tglbaru, $nama . "\n" . $bagian . ' - ' . $divisi, $barang, $telp));
+}
+
+// Menutup koneksi SQL Server
+sqlsrv_close($conn);
+
+// Output PDF
 $pdf->Output();
 ?>
 

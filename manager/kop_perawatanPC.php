@@ -1,6 +1,6 @@
 <?php
-require('fpdf17/fpdf.php');
-
+//require('fpdf17/fpdf.php');
+require('fpdf186/fpdf.php');
 class PDF extends FPDF
 {
 
@@ -275,6 +275,7 @@ function RowWithCheck($data, $checkValue = '1')
     $columnWidths = $this->widths; 
     $cellHeight = 5; // Tinggi dasar per baris teks
     $maxHeight = $cellHeight;
+    $nb=0;
 	for($i=0;$i<count($data);$i++)
 		$nb=max($nb,$this->NbLines($this->widths[$i],$data[$i]));
 	$h=5*$nb;

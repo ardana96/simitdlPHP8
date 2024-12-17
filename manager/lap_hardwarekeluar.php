@@ -1,6 +1,6 @@
 <?php
 require('kop_hardwarekeluar.php');
-
+include('../config.php');
  
 function GenerateWord()
 {
@@ -92,6 +92,31 @@ function selisihHari($tglAwal, $tglAkhir){
 	return $selisihTotal;
 }
 
+function countWorkDays($start_date, $end_date) {
+    // Konversi tanggal ke format DateTime
+    $start = new DateTime($start_date);
+    $end = new DateTime($end_date);
+
+    // Pastikan tanggal akhir lebih besar dari tanggal awal
+    if ($start > $end) {
+        return 0;
+    }
+
+    $workDays = 0;
+
+    // Iterasi dari tanggal awal ke tanggal akhir
+    while ($start <= $end) {
+        // Cek jika hari bukan Sabtu (6) atau Minggu (0)
+        if ($start->format('N') < 6) { // N memberikan angka 1-7 untuk Senin-Minggu
+            $workDays++;
+        }
+        // Tambahkan 1 hari
+        $start->modify('+1 day');
+    }
+
+    return $workDays;
+}
+
 
 $pdf=new PDF ('L');
 $pdf->AddPage();
@@ -100,28 +125,34 @@ $pdf->SetFont('Arial','',8);
 $pdf->SetWidths(array(7,17,19, 40,30,60,25,40,20, 20));
 //srand(microtime()*1000000);
 
-//koneksi ke database
-mysql_connect("localhost","root","dlris30g");
-mysql_select_db("sitdl");
 
-$status=$_POST['status'];
+
+
 $bln_akhir=$_POST['bln_akhir'];
 $thn_akhir=$_POST['thn_akhir'];
-$tanggal_akhir=$thn_akhir.$bln_akhir.$tgl_akhir;
-$tanggal_akhir_format=$bln_akhir."-".$thn_akhir;
+
 
 
 //mengambil data dari tabel
-$sql=mysql_query("SELECT * from service,divisi where service.divisi=divisi.kd and  service.status='Selesai' and service.ket='L' and  service.tgl like '%".$tanggal_akhir_format."' order by service.tgl asc");
-$count=mysql_num_rows($sql);
-for($i=0;$i<$count;$i++);{
-while ($database = mysql_fetch_array($sql)) {
+$sql = "SELECT *
+FROM service a
+LEFT JOIN divisi b ON a.divisi = b.kd
+where  a.statup='service' AND a.status='Selesai' AND a.ket='D' 
+AND MONTH(a.tgl) = '".$bln_akhir."'
+AND YEAR(a.tgl) = '".$thn_akhir."'
+ORDER BY a.svc_kat, a.tgl ASC";
+
+//$params = ["%" . $tanggal_akhir_format . "%"];
+$stmt = sqlsrv_query($conn, $sql);
+
+$no = 0;
+while ($database = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 $no = $no+1;
-$tgl=$database['tgl'];
+$tgl=$database['tgl'] ? $database['tgl']->format('d-m-Y') : '';
 $nama=$database['nama'];
 $bagian=$database['bagian'];
-$barang=$database['barang'];
-$tgl2=$database['tgl2'];
+//$barang=$database['barang'];
+$tgl2=$database['tgl2'] ? $database['tgl2']->format('d-m-Y') : '';
 $divisi=$database['namadivisi'];
 $kasus=$database['kasus'];
 $penerima=$database['penerima'];
@@ -129,16 +160,16 @@ $teknisi=$database['teknisi'];
 $tindakan=$database['tindakan'];
 $status=$database['status'];
 $ippc=$database['ippc'];
-$tgl3=$database['tgl3'];
+$tgl3=$database['tgl3'] ? $database['tgl3']->format('d-m-Y') : '';
 $luar=$database['luar'];
 $perangkat=$database['perangkat'];
-$awal=substr($tgl,0,2);
-$akhir=substr($tgl3,0,2);
-$semua=$hbulan;
-$bulan_awal=substr($tgl2,3,2);
-$bulan_akhir=substr($tgl3,3,2);
-$total_bulan=$bulan_akhir-$bulan_awal;
-$hbulan=$total_bulan*30+$akhir-$awal;
+// $awal=substr($tgl,0,2);
+// $akhir=substr($tgl3,0,2);
+// $semua=$hbulan;
+// $bulan_awal=substr($tgl2,3,2);
+// $bulan_akhir=substr($tgl3,3,2);
+// $total_bulan=$bulan_akhir-$bulan_awal;
+// $hbulan=$total_bulan*30+$akhir-$awal;
 $namabesar=strtoupper($nama);
 $perangkatbesar=strtoupper($perangkat);
 $kasusbesar=strtoupper($kasus);
@@ -146,10 +177,9 @@ $penerimabesar=strtoupper($penerima);
 $statusbesar=strtoupper($status);
 $teknisibesar=strtoupper($teknisi);
 $luarbesar=strtoupper($luar);
-$tglRequest = $database['tglRequest'];
-if($hbulan == 0){
-$hbulan=1;	
-}
+$tglRequest = $database['tglRequest']? $database['tglRequest']->format('d-m-Y') : '';
+
+
 
 
 //$tanggal1 = new DateTime($tgl);
@@ -214,11 +244,11 @@ $durasi = 0;
 if($tglRequest == ""|| $tglRequest == null){
 	$durasi = 0;
 }else{
-	$durasi = selisihHari($tglRequest,$tgl);
+	$durasi = countWorkDays($tglRequest,$tgl);
 	//$durasi = 2;
 }
 
-$pdf->Row(array($no, $tglRequest, $tgl2,$namabesar."\n".$bagian."-".$divisi,$perangkatbesar,$kasusbesar,$penerimabesar,$statusbesar."-".$luarbesar."(".$tgl3.")",selisihHari($tgl,$tgl3)." hr", $durasi." hr"));
-}}
+$pdf->Row(array($no, $tglRequest, $tgl2,$namabesar."\n".$bagian."-".$divisi,$perangkatbesar,$kasusbesar,$penerimabesar,$statusbesar."-".$luarbesar."(".$tgl3.")",countWorkDays($tgl,$tgl3)." hr", $durasi." hr"));
+}
 $pdf->Output();
 ?>
