@@ -170,136 +170,104 @@ mywin=window.open("manager/lap_jumkat.php?idkategori=" + idkategori ,"_blank",	"
 
 
 </script>
-            <div class="inner">
-                <div class="row">
-                    <div class="col-lg-12">
-
-
-                        <h2> Data Master Perawatan</h2>
-
-
-
-                    </div>
+<div class="inner">
+    <div class="row">
+        <div class="col-lg-12">
+            <h2>Data Master Perawatan</h2>
+        </div>
+    </div>
+    <hr />
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#newReg">Tambah</button>
                 </div>
-
-                <hr />
-
-
-                <div class="row">
-                <div class="col-lg-12">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-          
-                           <button class="btn btn-primary" data-toggle="modal"  data-target="#newReg">
-                                Tambah 
-                            </button>
-						</div>
-                        <div class="panel-body">
-                            <div class="table-responsive" style='overflow: scroll;'>
-                                <table class="table table-striped table-bordered table-hover" id="dataTables-example">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama User</th>
-											 
-											 <th>Akses</th>
-                                          
-											
-											<th>Hapus</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                       <?$sql = mysql_query("SELECT * FROM tuser");
-				if(mysql_num_rows($sql) > 0){
-				while($data = mysql_fetch_array($sql)){
-				$id_user=$data['id_user'];
-				$user=$data['user'];
-                $akses=$data['akses'];
-		
-		
-				
-			
-				?>
-				
+                <div class="panel-body">
+                    <div class="table-responsive" style='overflow: scroll;'>
+                        <table class="table table-striped table-bordered table-hover" id="dataTables-example">
+                            <thead>
+                                <tr>
+                                    <th>Nama User</th>
+                                    <th>Password</th>
+                                    <th>Akses</th>
+                                    <th>Edit</th>
+                                   
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                // **Jalankan query SELECT**
+                                $sql = sqlsrv_query($conn, "SELECT * FROM tuser");
+                                // **Periksa apakah ada data dalam hasil query**
+                                if (sqlsrv_has_rows($sql)) {
+                                    while ($data = sqlsrv_fetch_array($sql, SQLSRV_FETCH_ASSOC)) {
+                                        $id_user = $data['id_user'];
+                                        $user = $data['user'];
+                                        $password = $data['password'];
+                                        $akses = $data['akses'];
+                                ?>
                                         <tr class="gradeC">
-                                            <td><? echo $user ?></td>
-                                            <td><? echo $akses ?></td>
-												
-                                           <td class="center">
-											
-											
-										
-							
-
-                            <button type="button" class="btn btn-primary" onclick="openEditModal(<?php echo $id_user; ?>)">Edit</button>
-												
-											</td>
-                             
-											  <td class="center"><form action="aplikasi/user/deleteuser.php" method="post" >
-											<input type="hidden" name="id" value=<?php echo $id_user; ?> />
-										
-											<button  name="tombol" class="btn text-muted text-center btn-danger" type="submit">X</button>
-											</form> </td>
-                                            
+                                            <td><?php echo htmlspecialchars($user); ?></td>
+                                            <td><?php echo htmlspecialchars($password); ?></td>
+                                            <td><?php echo htmlspecialchars($akses); ?></td>
+                                            <td class="center">
+                                                <button type="button" class="btn btn-primary" onclick="openEditModal('<?php echo htmlspecialchars($id_user); ?>', '<?php echo htmlspecialchars($user); ?>', '<?php echo htmlspecialchars($data['password']); ?>', '<?php echo htmlspecialchars($akses); ?>')"> Edit</button>
+                                            </td>
+                                            <td class="center">
+                                                <form action="aplikasi/user/deleteuser.php" method="post">
+                                                    <input type="hidden" name="id" value="<?php echo htmlspecialchars($id_user); ?>" />
+                                                    <button name="tombol" class="btn text-muted text-center btn-danger" type="submit">X</button>
+                                                </form>
+                                            </td>
                                         </tr>
-		<?}}?>                      
                                     </tbody>
-                                </table>
-                            </div>
-                           
-                        </div>
+                                <?php
+                                    }
+                                }
+                                ?>
+                        
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-           
-		   
-		   
-		   
-<div class="col-lg-12">
-    <div class="modal fade" id="newReg" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h4 class="modal-title" id="H4"> Tambah Master Perawatan</h4>
-                </div>
-                <div class="modal-body">
-                    <form action="aplikasi/user/save_user.php" method="post"  enctype="multipart/form-data" name="postform2">
-
+        </div>
+    </div>
+    <div class="col-lg-12">
+        <div class="modal fade" id="newReg" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title" id="H4">Tambah Master Perawatan</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form action="aplikasi/user/save_user.php" method="post" enctype="multipart/form-data" name="postform2">
                             <div class="form-group">
-                                <label for="user"> Nama User</label>
-                                           
-                                <input placeholder="Nama User" class="form-control" type="text" name="user"  >
-                                   
+                                <label for="user">Nama User</label>
+                                <input placeholder="Nama User" class="form-control" type="text" name="user">
                             </div>
                             <div class="form-group">
-                                <label for="password"> Password</label>       
-                                <input placeholder="Password" class="form-control" type="text" name="password"  >
-                                   
+                                <label for="password">Password</label>
+                                <input placeholder="Password" class="form-control" type="text" name="password">
                             </div>
-
                             <div class="form-group">
-                                <!-- <label for="akses"> Hak Akses</label>  
-                                <input placeholder="Hak Akses" class="form-control" type="text" name="akses"  > -->
-
-                                <label for="akses"> Hak Akses</label>                                   
-                                <select class="form-control" name="akses" >
+                                <label for="akses">Hak Akses</label>
+                                <select class="form-control" name="akses">
                                     <option value=""></option>
                                     <option value="super admin">Super Admin</option>
                                     <option value="admin">Admin</option>
                                     <option value="user">User</option>
                                     <option value="iso">Iso</option>
-                                </select>	
-                                   
+                                </select>
                             </div>
-                          
-                    
-            
-                    
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal" onclick="refresh()">Close</button>
-                            <button type="Submit" class="btn btn-danger" name='tombol'>Simpan</button>
-                        </div>
-                    </form>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal" onclick="refresh()">Close</button>
+                                <button type="Submit" class="btn btn-danger" name='tombol'>Simpan</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -364,6 +332,54 @@ mywin=window.open("manager/lap_jumkat.php?idkategori=" + idkategori ,"_blank",	"
 
 
 <script>
+// Fungsi untuk membuka modal edit atau tambah
+function openEditModal(id_user, user, password, akses) {
+    // Isi nilai input modal dengan data dari baris yang dipilih
+    document.getElementById("id_user").value = id_user;
+    document.getElementById("user").value = user;
+    document.getElementById("password").value = password;
+    document.getElementById("akses").value = akses;
+
+    // Tampilkan modal
+    $('#newRegg').modal('show');
+}
+
+function simpanPerubahan() {
+    // Ambil data dari form
+    var id_user = document.getElementById("id_user").value;
+    var user = document.getElementById("user").value;
+    var password = document.getElementById("password").value;
+    var akses = document.getElementById("akses").value;
+
+    // Kirim data ke edit_user.php menggunakan AJAX
+    $.ajax({
+        url: "aplikasi/user/edit_user.php",
+        type: "POST",
+        data: {
+            id_user: id_user,
+            user: user,
+            password: password,
+            akses: akses
+        },
+        success: function(response) {
+            if (response.includes("✅")) {
+                // Tutup modal
+                $('#newRegg').modal('hide');
+
+                // Refresh data tabel setelah edit sukses
+                setTimeout(function() {
+                    location.reload();
+                }, 500);
+            } else {
+                alert("❌ Gagal menyimpan perubahan: " + response);
+            }
+        },
+        error: function() {
+            alert("❌ Terjadi kesalahan dalam AJAX.");
+        }
+    });
+}
+
 // Fungsi untuk menambah baris item di tabel
 function addRow() {
     var table = document.getElementById("itemTable").getElementsByTagName("tbody")[0];
@@ -378,6 +394,7 @@ function addRow() {
     table.appendChild(newRow); // Tambahkan baris yang sudah direset ke tabel
     //table.appendChild(newRow);
 }
+
 
 
 // Fungsi untuk menghapus baris item di tabel
