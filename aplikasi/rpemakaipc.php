@@ -218,8 +218,10 @@ $bulanData = fetchResults($bulanQuery);
                                             </td>
                                             <td class="center">
                                                 <form action="aplikasi/deletepemakaipc.php" method="post">
-                                                    <input type="hidden" name="nomor" value="<?php echo $nomor; ?>" />
-                                                    <button name="tombol" class="btn text-muted text-center btn-danger" type="submit" onclick="return confirm('Apakah anda yakin akan menghapus data ini?')">X</button>
+                                                    <input type="hidden" name="id" value="<?php echo $data['id']; ?>" />
+                                                    <button name="tombol" class="btn text-muted text-center btn-danger" type="submit"
+                                                        onclick="return confirm('Apakah Anda yakin akan menghapus data ini?')">X
+                                                    </button>
                                                 </form>
                                             </td>
                                         </tr>
@@ -292,58 +294,58 @@ $bulanData = fetchResults($bulanQuery);
         };
 
         fetch('aplikasi/filter_handler.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(filterData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            var table = $('#dataTables-example').DataTable(); // Ambil instance DataTables
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(filterData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                var table = $('#dataTables-example').DataTable(); // Ambil instance DataTables
 
-            table.clear().draw(); // Hapus semua data tanpa kehilangan pagination
+                table.clear().draw(); // Hapus semua data tanpa kehilangan pagination
 
-            data.forEach((item, index) => {
-                // Konversi ID bulan menjadi nama bulan
-                const namaBulan = bulanMapping[item.bulan] || "Tidak diketahui";
+                data.forEach((item, index) => {
+                    // Konversi ID bulan menjadi nama bulan
+                    const namaBulan = bulanMapping[item.bulan] || "Tidak diketahui";
 
-                table.row.add([
-                    item.nomor,
-                    item.ippc,
-                    item.idpc,
-                    item.user,
-                    item.namapc,
-                    item.bagian,
-                    item.subbagian,
-                    item.lokasi,
-                    item.prosesor,
-                    item.mobo,
-                    item.ram,
-                    item.harddisk,
-                    namaBulan, // Gunakan nama bulan yang sudah dikonversi
-                    item.tgl_perawatan,
-                    `<form action="user.php?menu=fupdate_pemakaipc" method="post">
+                    table.row.add([
+                        item.nomor,
+                        item.ippc,
+                        item.idpc,
+                        item.user,
+                        item.namapc,
+                        item.bagian,
+                        item.subbagian,
+                        item.lokasi,
+                        item.prosesor,
+                        item.mobo,
+                        item.ram,
+                        item.harddisk,
+                        namaBulan, // Gunakan nama bulan yang sudah dikonversi
+                        item.tgl_perawatan,
+                        `<form action="user.php?menu=fupdate_pemakaipc" method="post">
                         <input type="hidden" name="nomor" value="${item.nomor}" />
                         <button name="tombol" class="btn text-muted text-center btn-primary" type="submit">Perawatan</button>
                     </form>`,
-                    `<form action="user.php?menu=fupdate_kerusakanpc" method="post">
+                        `<form action="user.php?menu=fupdate_kerusakanpc" method="post">
                         <input type="hidden" name="nomor" value="${item.nomor}" />
                         <button name="tombol" class="btn text-muted text-center btn-primary" type="submit">Update</button>
                     </form>`,
-                    `<form action="aplikasi/deletepemakaipc.php" method="post">
+                        `<form action="aplikasi/deletepemakaipc.php" method="post">
                         <input type="hidden" name="nomor" value="${item.nomor}" />
                         <button name="tombol" class="btn text-muted text-center btn-danger" type="submit" onclick="return confirm('Apakah anda yakin akan menghapus data ini?')">X</button>
                     </form>`
-                ]).draw(false); // Tambahkan tanpa mereset tabel
+                    ]).draw(false); // Tambahkan tanpa mereset tabel
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
             });
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
     });
 
-    document.getElementById('clearFilter').addEventListener('click', function () {
+    document.getElementById('clearFilter').addEventListener('click', function() {
         // Refresh page
         window.location.reload();
     });
