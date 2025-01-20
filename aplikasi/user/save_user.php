@@ -1,54 +1,43 @@
 <?php
-// Konfigurasi koneksi database
-// $servername = "localhost";
-// $username = "root";
-// $password = "dlris30g";
-// $dbname = "sitag";
+include('../../config.php'); // Memastikan file konfigurasi koneksi sudah benar
 
-// // Membuat koneksi
-// $conn = mysql_connect($servername, $username, $password);
-// if (!$conn) {
-//     die("Connection failed: " . mysql_error());
-// }
+// **Pastikan koneksi SQL Server tersedia**
+if (!$conn) {
+    die("Koneksi ke database gagal: " . print_r(sqlsrv_errors(), true));
+}
 
-// // Memilih database
-// mysql_select_db($dbname, $conn);
-
-include('../../config.php');
-
-$conn = $koneksi;
-// Ambil data header dari form
+// **Ambil data dari form**
 $user = $_POST['user'];
 $password = $_POST['password'];
 $akses = $_POST['akses'];
-// Mulai transaksi
-mysql_query("START TRANSACTION", $conn);
+$file = $_POST['file'] ?? null; // Jika ada input file
 
-// Insert data ke tabel headers
-$insertHeaderQuery = sprintf(
-    "INSERT INTO tuser (user, password, akses) VALUES ('".$user."', '".$password."', '".$akses."')",
-    mysql_real_escape_string($nama_perangkat)
-);
+// **Mulai transaksi**
+sqlsrv_begin_transaction($conn);
 
-$result = mysql_query($insertHeaderQuery, $conn);
-if (!$result) {
-    mysql_query("ROLLBACK", $conn);
-    die("Error inserting header: " . mysql_error());
+try {
+    // **Gunakan parameterized query untuk keamanan**
+    $insertHeaderQuery = "INSERT INTO tuser ([user], [password], [akses], [file]) VALUES (?, ?, ?, ?)";
+    $params = [$user, $password, $akses, $file];
+
+    $stmt = sqlsrv_query($conn, $insertHeaderQuery, $params);
+
+    if ($stmt === false) {
+        // Jika query gagal, rollback transaksi
+        sqlsrv_rollback($conn);
+        die("❌ Transaksi gagal: " . print_r(sqlsrv_errors(), true));
+    } else {
+        // Jika sukses, commit transaksi
+        sqlsrv_commit($conn);
+        header('location:../../user.php?menu=users&stt=Simpan Berhasil');
+        exit();
+    }
+} catch (Exception $e) {
+    // Jika terjadi error, rollback transaksi
+    sqlsrv_rollback($conn);
+    die("❌ Error: " . $e->getMessage());
 }
 
-
-
-if($result){
-    header('location:../../user.php?menu=users&stt= Simpan Berhasil');}
-else{
-    echo "transaksi gagal";
-}
-// Commit transaksi jika semua insert berhasil
-mysql_query("COMMIT", $conn);
-echo "Order saved successfully!";
-
-
-
-// Tutup koneksi
-mysql_close($conn);
+// **Tutup koneksi**
+sqlsrv_close($conn);
 ?>

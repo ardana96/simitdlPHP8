@@ -1,37 +1,29 @@
 <?php
-// $server = "localhost";
-// $username = "root";
-// $password = "dlris30g";
-// $database = "sitag";
+include('../../config.php'); // Pastikan config.php menggunakan sqlsrv_connect()
 
-// // Membuka koneksi
-// $connection = mysql_connect($server, $username, $password);
-// mysql_select_db($database, $connection);
+// **Ambil data dari form**
+$id_user = $_POST['id_user'] ?? null;
+$user = $_POST['user'] ?? null;
+$password = $_POST['password'] ?? null;
+$akses = $_POST['akses'] ?? null;
 
+// **Pastikan semua data tersedia sebelum update**
+if (!$id_user || !$user || !$password || !$akses) {
+    die("❌ Semua field harus diisi!");
+}
 
-include('../../config.php');
-$connection = $koneksi;
+// **Gunakan parameterized query untuk keamanan**
+$query = "UPDATE tuser SET [user] = ?, [password] = ?, [akses] = ? WHERE id_user = ?";
+$params = [$user, $password, $akses, $id_user];
 
-$id_user = $_POST['id_user'];
-$user = $_POST['user'];
-$password = $_POST['password'];
-$akses = $_POST['akses'];
+$stmt = sqlsrv_query($conn, $query, $params);
 
+if ($stmt === false) {
+    die("❌ Error saat mengupdate data: " . print_r(sqlsrv_errors(), true));
+} else {
+    echo "✅ success";
+}
 
-if ($id_user) {
-    // Update perangkat jika ID ada
-    $query = "UPDATE tuser SET user = '$user', password = '$password', akses = '$akses'  WHERE id_user = '$id_user'";
-    mysql_query($query);
-} 
-// else {
-//     // Insert perangkat baru jika ID tidak ada
-//     $query = "INSERT INTO perangkat (nama_perangkat) VALUES ('$nama_perangkat')";
-//     mysql_query($query);
-//     $id_perangkat = mysql_insert_id(); // Dapatkan ID perangkat yang baru ditambahkan
-// }
-
-
-
-echo 'success';
-mysql_close($connection);
+// **Tutup koneksi**
+sqlsrv_close($conn);
 ?>
