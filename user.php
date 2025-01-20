@@ -1,12 +1,34 @@
-
-
-
-
 <?php
 session_start();
-include('config.php');
-$tgll=date('20y-01-01');
+include('config.php'); // Memastikan koneksi ke SQL Server
+
+// 🔹 Cek apakah cookie session tersedia
+if (isset($_COOKIE['session_token'])) {
+    $session_token = $_COOKIE['session_token'];
+
+    // 🔹 Cari user berdasarkan session token
+    $sql = "SELECT * FROM tuser WHERE session_token = ?";
+    $query = sqlsrv_query($conn, $sql, array($session_token));
+
+    if ($user = sqlsrv_fetch_array($query, SQLSRV_FETCH_ASSOC)) {
+        // 🔹 Gunakan data user dari database sebagai session aktif
+        $status_user = $user['user'];
+        $hak_akses = $user['akses'];
+    } else {
+        // 🔹 Jika tidak ditemukan, redirect ke login
+        header("Location: index.php");
+        exit();
+    }
+} else {
+    // 🔹 Jika tidak ada session token, redirect ke login
+    header("Location: index.php");
+    exit();
+}
+
+// Set tanggal awal tahun dengan format YYYY-01-01
+$tgll = date('Y-01-01');
 ?>
+
 <?php
 // session_start();
 // if(!isset($_SESSION['user'])&&!isset($_SESSION['akses'])){
@@ -466,7 +488,8 @@ $tgll=date('20y-01-01');
                    
                     </ul>
                 </li>-->
-							 
+
+
                 <?php if ($_SESSION['akses'] == 'super admin') {  ?> 
                 <li class="panel">
                     <a href="user.php?menu=users">
