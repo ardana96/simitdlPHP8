@@ -22,7 +22,8 @@
             border: 1px solid #ccc;
         }
         .judul {
-            font-size: 18px bold;
+            font-size: 18px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -40,16 +41,15 @@
                     <select name="bln_akhir" size="1">
                         <?php
                         for ($i = 1; $i <= 12; $i++) {
-                            if ($i < 10) { $i = "0" . $i; }
-                            echo "<option value=" . $i . ">" . $i . "</option>";
+                            $month = str_pad($i, 2, "0", STR_PAD_LEFT);
+                            echo "<option value=\"$month\">$month</option>";
                         }
                         ?>    
                     </select>
                     <select name="thn_akhir" size="1" id="thn_akhir">
                         <?php
                         for ($i = 2013; $i <= date('Y'); $i++) {
-                            if ($i < 10) { $i = "0" . $i; }
-                            echo "<option value=" . $i . ">" . $i . "</option>";
+                            echo "<option value=\"$i\">$i</option>";
                         }
                         ?>    
                     </select>
@@ -76,16 +76,15 @@
                     <select name="bln_akhir" size="1">
                         <?php
                         for ($i = 1; $i <= 12; $i++) {
-                            if ($i < 10) { $i = "0" . $i; }
-                            echo "<option value=" . $i . ">" . $i . "</option>";
+                            $month = str_pad($i, 2, "0", STR_PAD_LEFT);
+                            echo "<option value=\"$month\">$month</option>";
                         }
                         ?>    
                     </select>
                     <select name="thn_akhir" size="1" id="thn_akhir">
                         <?php
                         for ($i = 2013; $i <= date('Y'); $i++) {
-                            if ($i < 10) { $i = "0" . $i; }
-                            echo "<option value=" . $i . ">" . $i . "</option>";
+                            echo "<option value=\"$i\">$i</option>";
                         }
                         ?>    
                     </select>
