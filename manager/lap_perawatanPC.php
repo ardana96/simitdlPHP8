@@ -33,9 +33,13 @@ $pdf->SetWidths(array(7,15,20,20,22,40,20,15,15,15,15,11,24,15,15,15));
 
 
 //$status=$_POST['status'];
-$bulan=$_POST['bulan'] ? $_POST['bulan'] : $_GET['bulan'];
-$pdivisi=$_POST['pdivisi'] ? $_POST['pdivisi'] : $_GET['pdivisi'];
-$tahun_rawat=$_POST['tahun'] ? $_POST['tahun'] : $_GET['tahun'];
+// $bulan=$_POST['bulan'] ? $_POST['bulan'] : $_GET['bulan'];
+// $pdivisi=$_POST['pdivisi'] ? $_POST['pdivisi'] : $_GET['pdivisi'];
+// $tahun_rawat=$_POST['tahun'] ? $_POST['tahun'] : $_GET['tahun'];
+$bulan = isset($_POST['bulan']) ? $_POST['bulan'] : (isset($_GET['bulan']) ? $_GET['bulan'] : '');
+$pdivisi = isset($_POST['pdivisi']) ? $_POST['pdivisi'] : (isset($_GET['pdivisi']) ? $_GET['pdivisi'] : '');
+$tahun_rawat = isset($_POST['tahun']) ? $_POST['tahun'] : (isset($_GET['tahun']) ? $_GET['tahun'] : '');
+
 function generatebulan($tgl)
 {
 
