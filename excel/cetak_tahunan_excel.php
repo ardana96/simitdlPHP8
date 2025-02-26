@@ -1,105 +1,96 @@
 <?php
-header("Content-type: application/octet-stream");
-header("Content-Disposition: attachment; filename=Laporan Stock.xls");//ganti nama sesuai keperluan
+header("Content-type: application/vnd.ms-excel");
+header("Content-Disposition: attachment; filename=Laporan_Stock.xls"); // Ganti nama sesuai keperluan
 header("Pragma: no-cache");
 header("Expires: 0");
 
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+include('../config.php'); // Koneksi ke SQL Server
 
+if (!$conn) {
+    die("Koneksi database gagal: " . print_r(sqlsrv_errors(), true));
+}
 
-$divisi=$_POST['divisi'];
-$bln_akhir=$_POST['bln_akhir'];
-$thn_akhir=$_POST['thn_akhir'];
-$tanggal_akhir=$thn_akhir.$bln_akhir.$tgl_akhir;
-$tanggal_akhir_format=$bln_akhir."-".$thn_akhir;
-
+// $divisi = $_POST['divisi'] ?? ''; // Jika kosong, tampilkan semua divisi
+$bln_akhir = $_POST['bln_akhir'];
+$thn_akhir = $_POST['thn_akhir'];
+$tanggal_akhir_format = $bln_akhir . "-" . $thn_akhir;
 ?>
 <style>
-.warna{background-color:#D3D3D3;
-	
-}
+.warna {background-color: #D3D3D3;}
 </style>
- <table  width="100%" cellpadding="3" cellspacing="0" border="1">
-
+<table width="100%" cellpadding="3" cellspacing="0" border="1">
 <tr>
-<th align="center" colspan="6"><h2>LAPORAN STOCK</h2></th> 
-</tr> 
- <tr class="warna">
-               
-                  	<th>Nama Barang</th>
-                    <th>Awal</th>
-					<th>Masuk</th>
-					<th>Keluar</th>
-					<th>Sisa</th>
+    <th align="center" colspan="6"><h2>LAPORAN STOCK</h2></th>
+</tr>
+<tr class="warna">
+    <th>Divisi</th>
+    <th>Nama Barang</th>
+    <th>Awal</th>
+    <th>Masuk</th>
+    <th>Keluar</th>
+    <th>Sisa</th>
+</tr>
 <?php
+$query_barang = "SELECT tbarang.*, tpengambilan.divisi 
+                 FROM tbarang 
+                 LEFT JOIN trincipengambilan ON tbarang.idbarang = trincipengambilan.idbarang 
+                 LEFT JOIN tpengambilan ON trincipengambilan.nofaktur = tpengambilan.nofaktur
+                 WHERE report = 'y' 
+                 AND YEAR(tpengambilan.tglambil) = ? 
+                 AND MONTH(tpengambilan.tglambil) = ?";
 
+$params = [$thn_akhir, $bln_akhir];
 
-$sl=mysql_query("select * from tbarang where report='y' order by namabarang ");
-while($datarinci = mysql_fetch_array($sl)){
-$namabarang=$datarinci['namabarang'];
-$idbarang=$datarinci['idbarang'];
-
-$tanggal=$thn_akhir.'-'.$bln_akhir.'-'.$tgll;
-$tanggall=$thn_akhir.'-01-01';
-$tambah=0;
-$kurang=0;
-
-$sq=mysql_query("select stockawal from tbarang where idbarang='".$idbarang."' ");
-$dat=mysql_fetch_array($sq);
-$stockk=$dat['stockawal'];
-
-$a=mysql_query("select sum(jumlah)as jumta from tpembelian,trincipembelian where tpembelian.nofaktur=trincipembelian.nofaktur
-and  idbarang='".$idbarang."' and DATE_FORMAT(tpembelian.tglbeli,'%Y-%m-%d')<='".$tanggal."'");
-while($dataa = mysql_fetch_array($a)){
-$jumm=$dataa['jumta'];
+// Jika divisi dipilih, tambahkan filter
+if (!empty($divisi)) {
+    $query_barang .= " AND tpengambilan.divisi = ?";
+    $params[] = $divisi;
 }
 
-$b=mysql_query("select sum(jumlah)as jumta from tpengambilan,trincipengambilan where tpengambilan.nofaktur=trincipengambilan.nofaktur
-and  idbarang='".$idbarang."'  and DATE_FORMAT(tpengambilan.tglambil,'%Y-%m-%d')<='".$tanggal."'");
-while($datab = mysql_fetch_array($b)){
-$jummb=$datab['jumta'];
+$query_barang .= " ORDER BY tpengambilan.divisi, tbarang.namabarang";
+$result_barang = sqlsrv_query($conn, $query_barang, $params);
+
+if (!$result_barang) {
+    die(print_r(sqlsrv_errors(), true));
 }
 
-$stockawal=$stockk+$jumm-$jummb;
+while ($datarinci = sqlsrv_fetch_array($result_barang, SQLSRV_FETCH_ASSOC)) {
+    $divisi_barang = $datarinci['divisi'] ?? 'N/A';
+    $namabarang = $datarinci['namabarang'];
+    $idbarang = $datarinci['idbarang'];
 
-$squi=mysql_query("select * from tpembelian,trincipembelian where tpembelian.nofaktur=trincipembelian.nofaktur
-and tpembelian.tglbeli like '".$tanggal."%' and trincipembelian.idbarang='$idbarang'  ");
-while($datt = mysql_fetch_array($squi)){
-$nofaktur=$datt['nofaktur'];
-$jumlah=$datt['jumlah'];
-$tambah=$tambah+$jumlah;
-}
+    $tambah = 0;
+    $kurang = 0;
 
-$squii=mysql_query("select * from tpengambilan,trincipengambilan where tpengambilan.nofaktur=trincipengambilan.nofaktur
-and tpengambilan.tglambil like '".$tanggal."%' and trincipengambilan.idbarang='$idbarang'  ");
-while($datttt = mysql_fetch_array($squii)){
-$nofaktur=$datttt['nofaktur'];
-$jumlahh=$datttt['jumlah'];
-$kurang=$kurang+$jumlahh;
-}
+    $query_stock = "SELECT stockawal FROM tbarang WHERE idbarang = ?";
+    $result_stock = sqlsrv_query($conn, $query_stock, [$idbarang]);
+    $dat = sqlsrv_fetch_array($result_stock, SQLSRV_FETCH_ASSOC);
+    $stockawal = $dat['stockawal'] ?? 0;
 
-$sisa=$stockawal+$tambah-$kurang;
+    $query_pembelian = "SELECT SUM(jumlah) AS jumta FROM trincipembelian tp 
+                        INNER JOIN tpembelian t ON tp.nofaktur = t.nofaktur
+                        WHERE tp.idbarang = ? AND YEAR(t.tglbeli) = ? AND MONTH(t.tglbeli) = ?";
+    $result_pembelian = sqlsrv_query($conn, $query_pembelian, [$idbarang, $thn_akhir, $bln_akhir]);
+    $data_pembelian = sqlsrv_fetch_array($result_pembelian, SQLSRV_FETCH_ASSOC);
+    $jumm = $data_pembelian['jumta'] ?? 0;
 
+    $query_pengambilan = "SELECT SUM(jumlah) AS jumta FROM trincipengambilan tp 
+                          INNER JOIN tpengambilan t ON tp.nofaktur = t.nofaktur
+                          WHERE tp.idbarang = ? AND YEAR(t.tglambil) = ? AND MONTH(t.tglambil) = ?";
+    $result_pengambilan = sqlsrv_query($conn, $query_pengambilan, [$idbarang, $thn_akhir, $bln_akhir]);
+    $data_pengambilan = sqlsrv_fetch_array($result_pengambilan, SQLSRV_FETCH_ASSOC);
+    $jummb = $data_pengambilan['jumta'] ?? 0;
 
-
- ?>
-
-           
-<tr class="isi_tabel" >
+    $stockawal = $stockawal + $jumm - $jummb;
+    $sisa = $stockawal;
+?>
+<tr class="isi_tabel">
+    <td align="left" valign="top"><?php echo $divisi_barang; ?></td>
     <td align="left" valign="top"><?php echo $namabarang; ?></td>
-	<td align="left" valign="top"><?php echo $stockawal;  ?></td>
-	<td align="left" valign="top"><?php echo $tambah;  ?></td>
-	<td align="left" valign="top"><?php echo $kurang; ?></td>
-	<td align="left" valign="top"><?php echo $sisa; ?></td>
-	
-  </tr>
+    <td align="left" valign="top"><?php echo $stockawal; ?></td>
+    <td align="left" valign="top"><?php echo $tambah; ?></td>
+    <td align="left" valign="top"><?php echo $kurang; ?></td>
+    <td align="left" valign="top"><?php echo $sisa; ?></td>
+</tr>
 <?php } ?>
+</table>

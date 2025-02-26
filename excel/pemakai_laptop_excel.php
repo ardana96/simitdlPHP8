@@ -1,120 +1,64 @@
 <?php
-header("Content-type: application/octet-stream");
-header("Content-Disposition: attachment; filename=pemakaian_laptop.xls");//ganti nama sesuai keperluan
+session_start();
+require('../config.php');
+
+header("Content-Type: application/vnd.ms-excel");
+header("Content-Disposition: attachment; filename=pemakaian_laptop.xls");
 header("Pragma: no-cache");
 header("Expires: 0");
 
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+$divisi = $_POST['divisi'] ?? '';
 
-
-$divisi=$_POST['divisi'];
-
-?>
-<style>
-.warna{background-color:#D3D3D3;
-	
-}
-</style>
- <table  width="100%" cellpadding="3" cellspacing="0" border="1">
-
+echo '<table border="1" cellpadding="3" cellspacing="0" width="100%">
 <tr>
-<th align="center" colspan="6"><h2>PEMAKAIAN LAPTOP</h2></th> 
-</tr> 
- <tr class="warna">
-               
-                  <!--	<th>No</th>
-                    <th>User</th>
-					<th>Divisi</th>
-					<th>Bagian</th>
-					<th>ID PC</th>
-					<th>Nama PC</th> -->
-					
-					<th>No</th>
-					<th>Bagian</th>
-					<th>Sub Bagian</th>
-					<th>user</th>
-					<th>ID PC</th>
-					<th>Nama PC</th>
-					<th>Lokasi</th>
-					<th>Prosesor</th>
-					<th>Motherboard</th>
-					<th>Ram</th>
-					<th>Harddisk</th>
-					<th>Monitor</th>
-					<th>OS</th>
-					<th>TCP/IP</th>
-					<th>Jumlah</th>
-<?php
-$no=0;
-$perintah=mysql_query("SELECT * from pcaktif  where model='laptop' and divisi='$divisi' ");
-while($database=mysql_fetch_array($perintah)){
-	// $no=$no+1;
-// $user=$database['user'];
-// $divisi=$database['divisi'];
-// $bagian=$database['bagian'];
-// $idpc=$database['idpc'];
-// $namapc=$database['namapc'];
+    <th colspan="15"><h2>PEMAKAIAN LAPTOP</h2></th>
+</tr>
+<tr class="warna">
+    <th>No</th>
+    <th>Bagian</th>
+    <th>Sub Bagian</th>
+    <th>User</th>
+    <th>ID PC</th>
+    <th>Nama PC</th>
+    <th>Lokasi</th>
+    <th>Prosesor</th>
+    <th>Motherboard</th>
+    <th>RAM</th>
+    <th>Harddisk</th>
+    <th>Monitor</th>
+    <th>OS</th>
+    <th>TCP/IP</th>
+    <th>Jumlah</th>
+</tr>';
 
-	$no=$no+1;
-$nomor=$database['nomor'];
-$tanggal=$database['tanggal'];
-$user=$database['user'];
-$id_divisi=$database['id_divisi'];
-$bagian=$database['bagian'];
-$id_pc=$database['idpc'];
-$os=$database['os'];
-$prosesor=$database['prosesor'];
-$mobo=$database['mobo'];
-$id_monitor=$database['id_monitor'];
-$monitor=$database['monitor'];
-$ram=$database['ram'];
-$harddisk=$database['harddisk'];
-$jumlah=$database['jumlah'];
-$ganti=$database['ganti'];
-$keterangan=$database['keterangan'];
-$nama_pc=$database['namapc'];
-$ip_pc=$database['ippc'];
-$subbagian=$database['subbagian'];
-$lokasi=$database['lokasi'];
+$query = "SELECT * FROM pcaktif WHERE model = 'laptop' AND divisi LIKE ?";
+$params = array("%$divisi%");
+$stmt = sqlsrv_query($conn, $query, $params);
+
+if ($stmt === false) {
+    die(print_r(sqlsrv_errors(), true));
+}
+
+$no = 1;
+while ($data = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    echo '<tr class="isi_tabel">
+        <td>' . $no++ . '</td>
+        <td>' . htmlspecialchars($data['bagian']) . '</td>
+        <td>' . htmlspecialchars($data['subbagian']) . '</td>
+        <td>' . htmlspecialchars($data['user']) . '</td>
+        <td>' . htmlspecialchars($data['idpc']) . '</td>
+        <td>' . htmlspecialchars($data['namapc']) . '</td>
+        <td>' . htmlspecialchars($data['lokasi']) . '</td>
+        <td>' . htmlspecialchars($data['prosesor']) . '</td>
+        <td>' . htmlspecialchars($data['mobo']) . '</td>
+        <td>' . htmlspecialchars($data['ram']) . '</td>
+        <td>' . htmlspecialchars($data['harddisk']) . '</td>
+        <td>' . htmlspecialchars($data['monitor']) . '</td>
+        <td>' . htmlspecialchars($data['os']) . '</td>
+        <td>' . htmlspecialchars($data['ippc']) . '</td>
+        <td>' . htmlspecialchars($data['jumlah']) . '</td>
+    </tr>';
+}
+
+echo '</table>';
 ?>
-           
-<!--<tr class="isi_tabel" >
-    <td align="left" valign="top"><?php echo $no; ?></td>
-	<td align="left" valign="top"><?php echo $user; ?></td>
-	<td align="left" valign="top"><?php echo strtoupper($divisi); ?></td>
-	<td align="left" valign="top"><?php echo $bagian; ?></td>
-	<td align="left" valign="top"><?php echo $idpc; ?></td>
-	<td align="left" valign="top"><?php echo $namapc; ?></td> 
-	
-  </tr> -->
-  
-  <tr class="isi_tabel" >
-    
-
-  
-	<td align="left" valign="top"><?php echo $no; ?></td>
-	<td align="left" valign="top"><?php echo $bagian;?></td>
-	<td align="left" valign="top"><?php echo $subbagian;?></td>
-	<td align="left" valign="top"><?php echo $user; ?></td>
-	<td align="left" valign="top"><?php echo $id_pc; ?></td>
-	<td align="left" valign="top"><?php echo $nama_pc; ?></td>
-	<td align="left" valign="top"><?php echo $lokasi;?></td>
-	<td align="left" valign="top"><?php echo $prosesor; ?></td>
-	<td align="left" valign="top"><?php echo $mobo; ?></td>
-	<td align="left" valign="top"><?php echo $ram;?></td>
-	<td align="left" valign="top"><?php echo $harddisk; ?></td>
-	<td align="left" valign="top"><?php echo $monitor; ?></td>
-	<td align="left" valign="top"><?php echo $os; ?></td>
-	<td align="left" valign="top"><?php echo $ip_pc; ?></td>
-	<td align="left" valign="top"><?php echo $jumlah; ?></td>
-  </tr>
-<?php } ?>
