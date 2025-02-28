@@ -385,7 +385,7 @@ $tgll = date('Y-01-01');
                         <li><a href="#" onclick="popup_print(10)"><i class="icon-angle-right"></i>  Daftar Pemakai PC</a></li>
                         <li><a href="#" onclick="popup_print(15)"><i class="icon-angle-right"></i>  Printer</a></li>
                         <li><a href="#" onclick="popup_print(19)"><i class="icon-angle-right"></i> Laptop</a></li>
-						<li><a href="#" onclick="popup_print(28)"><i class="icon-angle-right"></i> Laptop V2</a></li>
+						<!-- <li><a href="#" onclick="popup_print(28)"><i class="icon-angle-right"></i> Laptop V2</a></li> -->
                         <li><a href="#" onclick="popup_print(16)"><i class="icon-angle-right"></i> Permintaan Barang</a></li>
         	<!--<li class=""><a href="#" onclick="popup_print(7)"><i class="icon-angle-right"></i>  Stock Cetak</a></li>-->
         		        <li class=""><a href="#" onclick="popup_print(17)"><i class="icon-angle-right"></i> Stock Cetak </a></li>

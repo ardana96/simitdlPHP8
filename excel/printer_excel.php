@@ -1,93 +1,73 @@
 <?php
+require('../config.php'); // Pastikan config.php sudah benar
 
-header("Content-type: application/octet-stream");
-header("Content-Disposition: attachment; filename=dafar_printer.xls");//ganti nama sesuai keperluan
+header("Content-type: application/vnd.ms-excel");
+header("Content-Disposition: attachment; filename=daftar_printer.xls"); // Nama file Excel
 header("Pragma: no-cache");
 header("Expires: 0");
 
-$user_database="root";
-$password_database="dlris30g";
-$server_database="localhost";
-$nama_database="sitdl";
-$koneksi=mysql_connect($server_database,$user_database,$password_database);
-if(!$koneksi){
-die("Tidak bisa terhubung ke server".mysql_error());}
-$pilih_database=mysql_select_db($nama_database,$koneksi);
-if(!$pilih_database){
-die("Database tidak bisa digunakan".mysql_error());}
+$status = $_POST['status'] ?? '';
 
-$status=$_POST['status'];
-$bln_akhir=$_POST['bln_akhir'];
-$thn_akhir=$_POST['thn_akhir'];
-$tanggal_akhir=$thn_akhir.$bln_akhir.$tgl_akhir;
-$tanggal_akhir_format=$bln_akhir."-".$thn_akhir;
+// **Pastikan koneksi database valid**
+if (!$conn) {
+    die("Koneksi database tidak valid. Periksa konfigurasi di config.php. " . print_r(sqlsrv_errors(), true));
+}
 
 ?>
 <style>
-.warna{background-color:#D3D3D3;
-	
-}
+.warna { background-color:#D3D3D3; }
 </style>
- <table  width="100%" cellpadding="3" cellspacing="0" border="1">
 
-<tr>
-<th align="center" colspan="4"><h2>DAFTAR PEMAKAI PRINTER & SCANNER </h2></th> 
-</tr> 
- <tr class="warna">
-               
-                  
-                    <th>NO</th>
-					<th>ID Perangkat</th>
-					<th>Jenis Printer</th>
-					<th>Keterangan</th>
-					
-                   
-				</tr>
-<?php
-$no=0;
-$perintah=mysql_query("SELECT * from printer where status='$status'");
-while($database=mysql_fetch_array($perintah)){
-	$no=$no+1;
-$id_perangkat=$database['id_perangkat'];
-$jenisprint=$database['printer'];
-$keterangan=$database['keterangan'];
-
-
-?>
-           
-<tr class="isi_tabel" >
-    
-
- 
-	<td align="left" valign="top"><?php echo $no; ?></td>
-	<td align="left" valign="top"><?php echo $id_perangkat; ?></td>
-	<td align="left" valign="top"><?php echo $jenisprint; ?></td>
-	<td align="left" valign="top"><?php echo $keterangan; ?></td>
-
-  </tr>
-<?php } ?>
-
+<table width="100%" cellpadding="3" cellspacing="0" border="1">
+    <tr>
+        <th align="center" colspan="4"><h2>DAFTAR PEMAKAI PRINTER & SCANNER</h2></th>
+    </tr>
+    <tr class="warna">
+        <th>NO</th>
+        <th>ID Perangkat</th>
+        <th>Jenis Printer</th>
+        <th>Keterangan</th>
+    </tr>
 
 <?php
-$no2=0;
-$perintah2=mysql_query("SELECT * from scaner where status='$status'");
-while($database2=mysql_fetch_array($perintah2)){
-	$no2=$no2+1;
-$id_perangkat2=$database2['id_perangkat'];
-$jenisprint2=$database2['printer'];
-$keterangan2=$database2['keterangan'];
+// **Mengambil data dari tabel printer**
+$query_printer = "SELECT id_perangkat, printer, keterangan FROM printer WHERE status = ?";
+$params = array($status);
+$stmt_printer = sqlsrv_query($conn, $query_printer, $params);
 
+if ($stmt_printer === false) {
+    die("Kesalahan dalam query printer: " . print_r(sqlsrv_errors(), true));
+}
 
+$no = 1;
+while ($row = sqlsrv_fetch_array($stmt_printer, SQLSRV_FETCH_ASSOC)) {
+    echo "<tr>
+            <td align='left'>{$no}</td>
+            <td align='left'>{$row['id_perangkat']}</td>
+            <td align='left'>{$row['printer']}</td>
+            <td align='left'>{$row['keterangan']}</td>
+          </tr>";
+    $no++;
+}
+
+// **Mengambil data dari tabel scanner**
+$query_scanner = "SELECT id_perangkat, printer, keterangan FROM scaner WHERE status = ?";
+$stmt_scanner = sqlsrv_query($conn, $query_scanner, $params);
+
+if ($stmt_scanner === false) {
+    die("Kesalahan dalam query scanner: " . print_r(sqlsrv_errors(), true));
+}
+
+$no2 = 1;
+while ($row2 = sqlsrv_fetch_array($stmt_scanner, SQLSRV_FETCH_ASSOC)) {
+    echo "<tr>
+            <td align='left'>{$no2}</td>
+            <td align='left'>{$row2['id_perangkat']}</td>
+            <td align='left'>{$row2['printer']}</td>
+            <td align='left'>{$row2['keterangan']}</td>
+          </tr>";
+    $no2++;
+}
 ?>
-           
-<tr class="isi_tabel" >
-    
 
- 
-	<td align="left" valign="top"><?php echo $no2; ?></td>
-	<td align="left" valign="top"><?php echo $id_perangkat2; ?></td>
-	<td align="left" valign="top"><?php echo $jenisprint2; ?></td>
-	<td align="left" valign="top"><?php echo $keterangan2; ?></td>
-
-  </tr>
-<?php } ?>
+</table>

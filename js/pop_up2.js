@@ -88,9 +88,9 @@ else if(parameter==27){
 mywin=window.open("manager/jalur_perawatanbaru2.php","_blank",	"toolbar=yes,location=yes,menubar=yes,copyhistory=yes,directories=no,status=no,resizable=no,width=1000,height=600"); 
 mywin.moveTo(100,100);}
 
-else if(parameter==28){
-mywin=window.open("manager/lap_laptopV2.php","_blank",	"toolbar=yes,location=yes,menubar=yes,copyhistory=yes,directories=no,status=no,resizable=no,width=1000,height=600"); 
-mywin.moveTo(100,100);}
+// else if(parameter==28){
+// mywin=window.open("manager/lap_laptopV2.php","_blank",	"toolbar=yes,location=yes,menubar=yes,copyhistory=yes,directories=no,status=no,resizable=no,width=1000,height=600"); 
+// mywin.moveTo(100,100);}
 
 else if(parameter==29){
 mywin=window.open("manager/jalur_perawatanPC.php","_blank",	"toolbar=yes,location=yes,menubar=yes,copyhistory=yes,directories=no,status=no,resizable=no,width=1000,height=600"); 

@@ -1,58 +1,107 @@
 <?php
 session_start();
-include('../config.php');
+include('../config.php'); // Menggunakan koneksi SQL Server dari config.php
 ?>
 
 <style>
-#pilih_laporan {
-	background-color: #666; height: 30px; width: 100%;
-	font-weight: bold; color: #FFF;
-	text-transform: capitalize;}
-#tampil_laporan{
-	height: auto;width: 100%; overflow: auto;
-	text-transform: capitalize;}
-.judul_laporan{
-	font-size: 14pt; font-weight: bold;
-	color: #000; text-align: center;}
-.header_footer{
-	background-color: #999;
-	text-align: center; font-weight: bold;}
-.isi_laporan{
-	font-size: 10pt; color: #000;
-	background-color: #FFF;}
-.resume_laporan{
-	background-color: #333;
-	font-weight: bold; color: #FFF;}
-@media print {  
-#pilih_laporan{display: none;} } 
+    #pilih_laporan {
+        background-color: #666;
+        height: 30px;
+        width: 100%;
+        font-weight: bold;
+        color: #FFF;
+        text-transform: capitalize;
+    }
+
+    #tampil_laporan {
+        height: auto;
+        width: 100%;
+        overflow: auto;
+        text-transform: capitalize;
+    }
+
+    .judul_laporan {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #000;
+        text-align: center;
+    }
+
+    .header_footer {
+        background-color: #999;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .isi_laporan {
+        font-size: 10pt;
+        color: #000;
+        background-color: #FFF;
+    }
+
+    .resume_laporan {
+        background-color: #333;
+        font-weight: bold;
+        color: #FFF;
+    }
+
+    @media print {
+        #pilih_laporan {
+            display: none;
+        }
+    }
 </style>
+
 <?php
-if(isset($_GET['tanggal'])){
-$tanggalbro=$_GET['tanggal'];
-$idbarang=$_GET['idbarang'];
-$tahun=substr($tanggalbro,0,4);
-$bulan=substr($tanggalbro,-5,2);
-$tanggal=substr($tanggalbro,-2,2);
-$tglbaru=$tanggal.'-'.$bulan.'-'.$tahun;
+if (isset($_GET['tanggal'])) {
+    $tanggalbro = $_GET['tanggal'];
+    $idbarang = $_GET['idbarang'];
+    $tahun = substr($tanggalbro, 0, 4);
+    $bulan = substr($tanggalbro, -5, 2);
+    $tanggal = substr($tanggalbro, -2, 2);
+    $tglbaru = $tanggal . '-' . $bulan . '-' . $tahun;
 
+    $tanggal = true;
 
-$tanggal=true;
+    // Mengonversi tanggal ke format SQL Server yang konsisten, sesuai SSMS
+    $date = date('Y-m-d', strtotime($tanggalbro));
 
-//$kd_toko=$_POST['kd_toko'];
-$query_get_faktur="SELECT * from tpembelian,trincipembelian where 
-tpembelian.nofaktur=trincipembelian.nofaktur and
-tpembelian.tglbeli BETWEEN '".$tanggalbro."' AND '".$tanggalbro."' and
-trincipembelian.idbarang='$idbarang' ";}
-else{
-$tanggal=false;
+    // Pastikan idbarang sesuai format yang tepat (tanpa spasi, hanya angka, sesuai SSMS)
+    $idbarang = trim(preg_replace('/[^0-9]/', '', $idbarang)); // Hanya ambil angka, hapus spasi dan karakter non-numerik
+    if (strlen($idbarang) < 15) {
+        $idbarang_padded = str_pad($idbarang, 15, '0', STR_PAD_LEFT); // Pastikan panjang 15 digit dengan leading zeros
+    } else {
+        $idbarang_padded = $idbarang; // Gunakan asli jika sudah cukup panjang
+    }
 
-//$kd_toko=$_SESSION['kd_toko'];
-$query_get_faktur="SELECT * from tpembelian ";}
+    // Query langsung menyesuaikan dengan SSMS, menggunakan TRIM untuk memastikan kecocokan penuh
+    $query_get_faktur = "SELECT * FROM tpembelian 
+                         INNER JOIN trincipembelian ON TRIM(tpembelian.nofaktur) = TRIM(trincipembelian.nofaktur) 
+                         WHERE CONVERT(date, tpembelian.tglbeli) = ? 
+                         AND TRIM(trincipembelian.idbarang) = ?";
+    $params_get_faktur = [$date, $idbarang_padded];
+    $get_faktur = sqlsrv_query($conn, $query_get_faktur, $params_get_faktur);
 
-$get_faktur=mysql_query($query_get_faktur);
-$count_faktur=mysql_num_rows($get_faktur);
-$total_seluruh_beli=0; $total_seluruh_item=0; 
+    if ($get_faktur === false) {
+        die("Query gagal: " . print_r(sqlsrv_errors(), true));
+    }
+
+} else {
+    $tanggal = false;
+
+    // Query default untuk semua faktur pembelian (tanpa filter)
+    $query_get_faktur = "SELECT * FROM tpembelian";
+    $get_faktur = sqlsrv_query($conn, $query_get_faktur);
+
+    if ($get_faktur === false) {
+        die(print_r(sqlsrv_errors(), true));
+    }
+}
+
+$total_seluruh_beli = 0;
+$total_seluruh_item = 0;
 ?>
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -61,101 +110,130 @@ $total_seluruh_beli=0; $total_seluruh_item=0;
 <link href="../css/laporan.css" rel="stylesheet" type="text/css" />
 </head>
 
-<body >
-<div id="tampil_laporan"><table width="95%" border="0" align="center">
-  <tr>
-    <td colspan="9" align="center" class="judul_laporan"><p>Laporan Pemasukan Barang</p>
-      <p>Tanggal : <?php if($tanggal==true){ echo $tglbaru." s/d ".$tglbaru; } ?></p><br></td>
-    </tr>
-	  <tr class="header_footer">
- <td>No Faktur</td>
- <td>Tanggal </td>
- <td>Supplier </td> 
-   <td>Nama Barang </td>
-    <td>Jumlah</td>
-    <td>Permintaan</td>
-	<td>Bagian</td>
-	<td>Devisi</td>
-	<td>Keterangan</td>
+<body>
+<div id="tampil_laporan">
+    <table width="95%" border="0" align="center">
+        <tr>
+            <td colspan="9" align="center" class="judul_laporan">
+                <p>Laporan Pemasukan Barang</p>
+                <p>Tanggal : <?php if ($tanggal == true) echo $tglbaru . " s/d " . $tglbaru; ?></p><br>
+            </td>
+        </tr>
+        <tr class="header_footer">
+            <td>No Faktur</td>
+            <td>Tanggal</td>
+            <td>Supplier</td>
+            <td>Nama Barang</td>
+            <td>Jumlah</td>
+            <td>Permintaan</td>
+            <td>Bagian</td>
+            <td>Divisi</td>
+            <td>Keterangan</td>
+        </tr>
+        <?php
+        // Gunakan while loop untuk menangkap semua baris dari query, tanpa bergantung pada $count_faktur
+        if ($get_faktur) {
+            $hasData = false;
+            while ($faktur = sqlsrv_fetch_array($get_faktur, SQLSRV_FETCH_ASSOC)) {
+                $hasData = true;
+                $nofaktur = $faktur['nofaktur'];
+                $id_user = $faktur['id_user'] ?? '';
+                $tglbeli = $faktur['tglbeli'];
+                $idsupp = $faktur['idsupp'];
+                $keterangan = $faktur['keterangan'] ?? '';
+                $namasupp = $faktur['namasupp'] ?? '';
+                $atas_nama = $faktur['atas_nama'] ?? '';
+                $total_pembelian = $faktur['total_pembelian'] ?? 0;
 
-  </tr>
-<?php
-for($i=0; $i<$count_faktur; $i++){
-$faktur=mysql_fetch_array($get_faktur);
-$nofaktur=$faktur['nofaktur'];
-$id_user=$faktur['id_user'];
-$tglbeli=$faktur['tglbeli'];
-$idsupp=$faktur['idsupp'];
-$keterangan=$faktur['keterangan'];
-$namasupp=$faktur['namasupp'];
-$atas_nama=$faktur['atas_nama'];
-$tgl=substr($tgl_pembelian,8,2);
-$bln=substr($tgl_pembelian,5,2);
-$thn=substr($tgl_pembelian,0,4);
-$tglbeliformat=$tgl."-".$bln."-".$thn;
-$total_pembelian=$faktur['total_pembelian']; ?>
+                // Format tanggal untuk tampilan
+                if ($tglbeli instanceof DateTime) {
+                    $tglbeliformat = $tglbeli->format('d-m-Y');
+                } else {
+                    $tglbeliformat = date('d-m-Y', strtotime($tglbeli));
+                }
 
+                // Mendapatkan nama supplier dari tabel tsupplier menggunakan SQL Server
+                $query_supplier = "SELECT namasupp FROM tsupplier WHERE TRIM(idsupp) = TRIM(?)";
+                $params_supplier = [$idsupp];
+                $stmt_supplier = sqlsrv_query($conn, $query_supplier, $params_supplier);
+                if ($stmt_supplier === false) {
+                    die(print_r(sqlsrv_errors(), true));
+                }
+                $rinci = sqlsrv_fetch_array($stmt_supplier, SQLSRV_FETCH_ASSOC);
+                $namasupp = $rinci['namasupp'] ?? 'N/A';
 
+                // Query untuk rincian pembelian menggunakan SQL Server, langsung sesuai SSMS
+                $query_get_rinci_pembelian = "SELECT trincipembelian.nofaktur, trincipembelian.idbarang, trincipembelian.namabarang, SUM(trincipembelian.jumlah) AS jumta 
+                                              FROM trincipembelian 
+                                              WHERE TRIM(trincipembelian.nofaktur) = TRIM(?) AND TRIM(trincipembelian.idbarang) = TRIM(?) 
+                                              GROUP BY trincipembelian.nofaktur, trincipembelian.idbarang, trincipembelian.namabarang";
+                $params_rinci_pembelian = [$nofaktur, $idbarang_padded];
+                $get_rinci_pembelian = sqlsrv_query($conn, $query_get_rinci_pembelian, $params_rinci_pembelian);
 
- 
-<?
-$cc="SELECT * FROM tsupplier WHERE idsupp='".$idsupp."' ";
-$ccc=mysql_query($cc);
-while($rinci=mysql_fetch_array($ccc)){
-$namasupp=$rinci['namasupp'];}?>
+                if ($get_rinci_pembelian === false) {
+                    die(print_r(sqlsrv_errors(), true));
+                }
 
-  
+                $total_item = 0;
+                while ($rinci_pembelian = sqlsrv_fetch_array($get_rinci_pembelian, SQLSRV_FETCH_ASSOC)) {
+                    $idbarang = $rinci_pembelian['idbarang'];
+                    $namabarang = $rinci_pembelian['namabarang'];
+                    $jumta = $rinci_pembelian['jumta'] ?? 0;
 
+                    // Mendapatkan data permintaan dari rincipermintaan dan permintaan menggunakan SQL Server
+                    $query_minta = "SELECT nomor FROM rincipermintaan WHERE TRIM(nofaktur) = TRIM(?)";
+                    $params_minta = [$nofaktur];
+                    $minta = sqlsrv_query($conn, $query_minta, $params_minta);
+                    if ($minta === false) {
+                        die(print_r(sqlsrv_errors(), true));
+                    }
+                    $dminta = sqlsrv_fetch_array($minta, SQLSRV_FETCH_ASSOC);
+                    $nomorminta = $dminta['nomor'] ?? '';
 
-  <?php
-$query_get_rinci_pembelian="SELECT *,sum(jumlah) as jumta FROM trincipembelian WHERE nofaktur='".$nofaktur."' and idbarang='$idbarang' group by idbarang ";
-$get_rinci_pembelian=mysql_query($query_get_rinci_pembelian);
-$total_item=0;
-while($rinci_pembelian=mysql_fetch_array($get_rinci_pembelian)){
-$nofaktur=$rinci_pembelian['nofaktur'];
-$idbarang=$rinci_pembelian['idbarang'];
-$namabarang=$rinci_pembelian['namabarang'];
-$jumlah=$rinci_pembelian['jumlah'];
-$jumta=$rinci_pembelian['jumta'];
+                    $query_peminta = "SELECT nama, bagian, divisi FROM permintaan WHERE TRIM(nomor) = TRIM(?)";
+                    $params_peminta = [$nomorminta];
+                    $peminta = sqlsrv_query($conn, $query_peminta, $params_peminta);
+                    if ($peminta === false) {
+                        die(print_r(sqlsrv_errors(), true));
+                    }
+                    $dpeminta = sqlsrv_fetch_array($peminta, SQLSRV_FETCH_ASSOC);
+                    $nmpeminta = $dpeminta['nama'] ?? '';
+                    $bagianpeminta = $dpeminta['bagian'] ?? '';
+                    $divisi = $dpeminta['divisi'] ?? '';
+                ?>
+                    <tr class="isi_laporan">
+                        <td><?php echo htmlspecialchars($nofaktur); ?></td>
+                        <td><?php echo htmlspecialchars($tglbeliformat); ?></td>
+                        <td><?php echo htmlspecialchars($namasupp); ?></td>
+                        <td><?php echo htmlspecialchars($namabarang); ?> </td>
+                        <td><?php echo htmlspecialchars($jumta); ?> </td>
+                        <td><?php echo htmlspecialchars($nmpeminta); ?> </td>
+                        <td><?php echo htmlspecialchars($bagianpeminta); ?> </td>
+                        <td><?php echo htmlspecialchars($divisi); ?> </td>
+                        <td><?php echo htmlspecialchars($keterangan); ?> </td>
+                    </tr>
+                    <tr>
+                        <td colspan='9'><hr></td>
+                    </tr>
+                <?php
+                    $total_item += $jumta; // Menambahkan jumlah ke total item
+                }
+                $total_seluruh_beli += $total_pembelian; // Menambahkan total pembelian ke total seluruh
+                $total_seluruh_item += $total_item; // Menambahkan total item ke total seluruh
+            }
 
-$minta=mysql_query("select * from rincipermintaan where nofaktur='$nofaktur'");
- while($dminta=mysql_fetch_array($minta)){
- $nomorminta=$dminta['nomor'];}
- 
- $peminta=mysql_query("select * from permintaan where nomor='$nomorminta'");
- while($dpeminta=mysql_fetch_array($peminta)){
- $nmpeminta=$dpeminta['nama'];
- $bagianpeminta=$dpeminta['bagian'];
-  $divisi=$dpeminta['divisi'];}
- ?>
-<tr class="isi_laporan">
- <td><?php echo $nofaktur; ?></td>
-  <td><?php echo $tglbeli; ?></td>
-   <td><?php echo $namasupp; ?></td>
-    <td><?php echo $namabarang; ?>&nbsp;</td>
-    <td>
+            // Tampilkan pesan "Tidak ada data" hanya jika tidak ada data yang diproses
+            if (!$hasData && isset($_GET['tanggal'])) {
+        ?>
+                <tr class="isi_laporan">
+                    <td colspan="9" align="center">Tidak ada data untuk tanggal <?php echo $tglbaru; ?> dan ID Barang <?php echo $idbarang_padded; ?></td>
+                </tr>
+        <?php
+            }
+        }
+        ?>
 
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<?php echo $jumta; ?>&nbsp;</td>
-    <td >
-	<?php echo $nmpeminta; ?>&nbsp;</td>
-	<td >
-	<?php echo $bagianpeminta; ?>&nbsp;</td>
-	<td >
-	<?php echo $divisi; ?>&nbsp;</td>
-<td >
-	<?php echo $keterangan; ?>&nbsp;</td>
-  </tr>
-
-<tr>
-<td colspan='9'><hr></td>
-</tr>
-<?php }?>
-
-
-<?php }?>
-
-</table>
+    </table>
 </div>
 </body>
 </html>
