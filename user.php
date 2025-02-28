@@ -591,6 +591,8 @@ case('permintaan');include('aplikasi/permintaan.php');break;
 case('riwayatsemua');include('aplikasi/riwayatservicesemua.php');break;
 case('servicelain');include('aplikasi/servicelain.php');break;
 case('inputpc');include('aplikasi/inputpc.php');break;
+//stockopname
+case('stockop');include('aplikasi/stockopname/index.php');break;
 case('inputpcV2');include('aplikasi/inputpcV2.php');break;
 case('fkerusakanprinter');include('aplikasi/fkerusakanprinter.php');break;
 case('serviceprinter');include('aplikasi/serviceprinter.php');break;
