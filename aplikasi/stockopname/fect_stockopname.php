@@ -18,7 +18,7 @@ $offset = ($page - 1) * $limit; // Mulai dari row ke-berapa
 // Query dengan pagination menggunakan ROW_NUMBER dan ORDER BY id ASC
 $sql = "SELECT * FROM (
     SELECT ROW_NUMBER() OVER (ORDER BY id ASC) AS RowNum, 
-           nomor, ippc, idpc, [user], namapc, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, bulan, tgl_perawatan, tgl_update
+           id, nomor, ippc, idpc, [user], namapc, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, bulan, tgl_perawatan, tgl_update
     FROM pcaktif
 ) AS RowConstrainedResult
 WHERE RowNum > ? AND RowNum <= ?";
