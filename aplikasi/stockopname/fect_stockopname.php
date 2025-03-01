@@ -10,14 +10,19 @@ if ($conn === false) {
     ]));
 }
 
-// Ambil halaman dari request, default halaman pertama (1)
+// Ambil halaman dan limit dari request, default halaman pertama (1) dan limit 10
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = 10; // Jumlah data per halaman
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10; // Default 10 jika tidak ada limit
 $offset = ($page - 1) * $limit; // Mulai dari row ke-berapa
 
-// Query dengan pagination menggunakan OFFSET dan FETCH (SQL Server 2012+)
-$sql = "SELECT * FROM pcaktif ORDER BY ippc DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
-$params = array($offset, $limit);
+// Query dengan pagination menggunakan ROW_NUMBER dan ORDER BY id ASC
+$sql = "SELECT * FROM (
+    SELECT ROW_NUMBER() OVER (ORDER BY id ASC) AS RowNum, 
+           nomor, ippc, idpc, [user], namapc, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, bulan, tgl_perawatan, tgl_update
+    FROM pcaktif
+) AS RowConstrainedResult
+WHERE RowNum > ? AND RowNum <= ?";
+$params = array($offset, $offset + $limit);
 $query = sqlsrv_query($conn, $sql, $params);
 
 // Periksa apakah query berhasil

@@ -6,7 +6,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Pemakai Komputer V2</title>
-    <!-- Tambahkan link ke styleop.css -->
     <link rel="stylesheet" href="aplikasi/stockopname/stockopstyle/styleop.css">
     <!-- Jika ada Bootstrap atau CSS lain, pastikan tetap disertakan -->
 </head>
@@ -14,7 +13,7 @@
 <div class="inner">
     <div class="row">
         <div class="col-lg-12">
-            <h2>Daftar Pemakai Komputer V2</h2>
+            <h2>Stock Opname</h2>
         </div>
     </div>
     <hr />
@@ -26,8 +25,11 @@
                     <a href="user.php?menu=inputpcV2">
                         <button class="btn btn-primary">Tambah PC</button>
                     </a>
+                    <!-- Dropdown akan dibuat di JavaScript -->
+                   
                 </div>
                 <div class="panel-body">
+                    <div id="recordsPerPageContainer"></div>
                     <div class="table-responsive" style='overflow: scroll;'>
                         <table class="table table-striped table-bordered table-hover" id="dataTables">
                             <thead>

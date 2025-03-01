@@ -50,3 +50,51 @@
     background-color: #e9ecef;
     color: #007bff; /* Warna font biru saat hover, opsional */
 }
+/* Styling untuk tombol "..." */
+.pagination .dots-btn {
+    padding: 5px 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 4px;
+    color: #007bff; /* Sesuaikan warna font, misalnya biru seperti tombol lain */
+}
+
+/* Styling untuk popup */
+#pageInputPopup {
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+#pageInputPopup input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#pageInputPopup button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+#pageInputPopup button:hover {
+    background-color: #0056b3;
+}
+/* Styling untuk container dropdown Records per page */
+#recordsPerPageContainer {
+    margin-top: -30px; /* Naikkan elemen ke atas (sesuaikan nilai ini untuk posisi yang diinginkan) */
+    margin-left: -15px; /* Geser ke kiri (sesuaikan nilai ini untuk sejajar dengan tepi tabel) */
+    display: inline-block; /* Pastikan elemen tetap inline dengan elemen lain di panel-heading */
+}
+
+/* Pastikan tabel tetap berada di posisi yang diinginkan */
+.table-responsive {
+    margin-top: 20px; /* Tambahkan margin atas untuk tabel agar tidak terlalu dekat dengan dropdown */
+    overflow: scroll;
+}
+
+/* Styling tambahan untuk panel-body agar layout konsisten */
+.panel-body {
+    padding: 15px; /* Pastikan padding panel-body cukup untuk memberikan ruang */
+}
