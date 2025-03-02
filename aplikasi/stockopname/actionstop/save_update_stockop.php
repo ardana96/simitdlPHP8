@@ -78,10 +78,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         echo "Gagal menyimpan data: " . print_r(sqlsrv_errors(), true);
         exit;
     } else {
-        // Ambil currentPage dan recordsPerPage dari session (debug)
+        // Ambil dan perbarui session dengan nilai terakhir
         $currentPage = isset($_SESSION['current_page']) && $_SESSION['current_page'] > 0 ? (int)$_SESSION['current_page'] : 1;
         $recordsPerPage = isset($_SESSION['records_per_page']) && $_SESSION['records_per_page'] > 0 ? (int)$_SESSION['records_per_page'] : 10;
-        error_log("Session saat redirect: current_page = $currentPage, records_per_page = $recordsPerPage");
+        // Pastikan session diperbarui sebelum redirect
+        $_SESSION['current_page'] = $currentPage;
+        $_SESSION['records_per_page'] = $recordsPerPage;
+        error_log("Session diperbarui sebelum redirect: current_page = $currentPage, records_per_page = $recordsPerPage");
 
         // Redirect ke user.php tanpa parameter page dan limit di URL
         header("Location: http://localhost/simitdlPHP8/user.php?menu=stockop");
