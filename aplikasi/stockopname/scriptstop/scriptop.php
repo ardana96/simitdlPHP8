@@ -94,7 +94,8 @@ $(document).ready(function() {
                         html += '<input type="hidden" name="nomor" value="' + (row.nomor || '') + '" />';
                         html += '<button class="btn btn-primary" type="submit">Perawatan</button></form></td>';
                         // Formulir untuk tombol "Update"
-                        html += '<td class="center"><form action="user.php?menu=fupdate_kerusakanpc2" method="post">';
+                        html += '<td class="center"><form action="user.php?menu=updatestockop" method="post">';
+                        html += '<input type="hidden" name="id" value="' + (row.id || '') + '" />';
                         html += '<input type="hidden" name="nomor" value="' + (row.nomor || '') + '" />';
                         html += '<button class="btn btn-primary" type="submit">Update</button></form></td>';
                         // Formulir untuk tombol "Hapus" dengan konfirmasi
@@ -214,62 +215,84 @@ $(document).ready(function() {
 
     // Fungsi untuk menampilkan popup input nomor halaman saat tombol "..." diklik
     function showPageInput(position) {
-        // Buat elemen popup untuk input nomor halaman
-        var popup = $('<div id="pageInputPopup" style="position: absolute; background: white; border: 1px solid #ccc; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;"></div>');
-        var input = $('<input type="number" id="pageNumber" min="1" style="padding: 5px; width: 100px; margin-right: 5px;">');
-        var submitBtn = $('<button style="padding: 5px 10px; cursor: pointer;">Go</button>');
+    var popup = $('<div id="pageInputPopup" style="position: absolute; background: white; border: 1px solid #ccc; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;"></div>');
+    var input = $('<input type="number" id="pageNumber" min="1" style="padding: 5px; width: 100px; margin-right: 5px;">');
+    var submitBtn = $('<button style="padding: 5px 10px; cursor: pointer;">Go</button>');
 
-        popup.append(input).append(submitBtn);
+    popup.append(input).append(submitBtn);
+    var $dotsBtn = $(position.target);
+    var offset = $dotsBtn.offset();
+    popup.css({ top: offset.top - 50, left: offset.left });
+    $('body').append(popup);
 
-        // Posisikan popup di atas tombol "..." yang diklik
-        var $dotsBtn = $(position.target);
-        var offset = $dotsBtn.offset();
-        popup.css({
-            top: offset.top - 50, // Popup muncul 50px di atas tombol
-            left: offset.left
-        });
-
-        // Tambahkan popup ke body
-        $('body').append(popup);
-
-        // Event listener untuk submit via Enter
-        input.on('keypress', function(e) {
-            if (e.which === 13) { // Enter key
-                var page = parseInt($(this).val());
-                console.log("Enter pressed, page:", page);
-                if (page >= 1 && page <= totalPagesGlobal) {
-                    loadData(page); // Muat data untuk halaman yang dimasukkan
-                    $('#pageInputPopup').remove(); // Hapus popup
-                    bindPaginationEvents(); // Re-bind event listeners
-                } else {
-                    alert('Masukkan nomor halaman yang valid (1-' + totalPagesGlobal + ')');
-                }
-            }
-        });
-
-        // Event listener untuk tombol "Go"
-        submitBtn.on('click', function() {
-            var page = parseInt(input.val());
-            console.log("Go button clicked, page:", page);
+    // Event listener untuk submit via Enter
+    input.on('keypress', function(e) {
+        if (e.which === 13) { // Enter key
+            var page = parseInt($(this).val());
             if (page >= 1 && page <= totalPagesGlobal) {
                 loadData(page); // Muat data untuk halaman yang dimasukkan
+                // Simpan ke session
+                $.ajax({
+                    url: 'aplikasi/stockopname/actionstop/save_page.php',
+                    method: 'POST',
+                    data: { 
+                        page: page,
+                        recordsPerPage: recordsPerPage
+                    },
+                    dataType: 'json',
+                    success: function(data) {
+                        console.log("Halaman disimpan ke session via Enter:", page);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Gagal menyimpan halaman via Enter:", error);
+                    }
+                });
                 $('#pageInputPopup').remove(); // Hapus popup
                 bindPaginationEvents(); // Re-bind event listeners
             } else {
                 alert('Masukkan nomor halaman yang valid (1-' + totalPagesGlobal + ')');
             }
-        });
+        }
+    });
 
-        // Event listener untuk menutup popup jika klik di luar
-        $(document).off("click", "#pageInputPopupClose").on("click", function(e) {
-            if (!popup.is(e.target) && popup.has(e.target).length === 0) {
-                console.log("Popup closed by clicking outside");
-                popup.remove(); // Hapus popup
-                bindPaginationEvents(); // Re-bind event listeners
-                $(document).off("click", "#pageInputPopupClose"); // Hapus event listener setelah digunakan
-            }
-        });
-    }
+    // Event listener untuk tombol "Go"
+    submitBtn.on('click', function() {
+        var page = parseInt(input.val());
+        if (page >= 1 && page <= totalPagesGlobal) {
+            loadData(page); // Muat data untuk halaman yang dimasukkan
+            // Simpan ke session
+            $.ajax({
+                url: 'aplikasi/stockopname/actionstop/save_page.php',
+                method: 'POST',
+                data: { 
+                    page: page,
+                    recordsPerPage: recordsPerPage
+                },
+                dataType: 'json',
+                success: function(data) {
+                    console.log("Halaman disimpan ke session via Go:", page);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Gagal menyimpan halaman via Go:", error);
+                }
+            });
+            $('#pageInputPopup').remove(); // Hapus popup
+            bindPaginationEvents(); // Re-bind event listeners
+        } else {
+            alert('Masukkan nomor halaman yang valid (1-' + totalPagesGlobal + ')');
+        }
+    });
+
+    // Event listener untuk menutup popup jika klik di luar
+    $(document).on("click", function(e) {
+        if (!popup.is(e.target) && popup.has(e.target).length === 0) {
+            console.log("Popup closed by clicking outside");
+            popup.remove(); // Hapus popup
+            bindPaginationEvents(); // Re-bind event listeners
+            $(document).off("click");
+        }
+    });
+}
 
     // Event listener untuk formulir penghapusan data (tombol "Hapus")
     $('#dataBody').on('submit', 'form[action="aplikasi/stockopname/actionstop/stc_deletdatas.php"]', function(e) {
