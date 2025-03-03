@@ -13,15 +13,17 @@
             method: 'GET',
             dataType: 'json',
             success: function(response) {
+                console.log("Respons dari save_page.php:", response);
                 const initialPage = response.current_page ? parseInt(response.current_page) : 1;
                 const initialLimit = response.records_per_page ? parseInt(response.records_per_page) : 10;
 
                 recordsPerPage = initialLimit;
                 $('#recordsPerPage').val(recordsPerPage);
                 loadData(initialPage); // Muat data dengan halaman dari session
+                console.log("Initial load with page:", initialPage, "limit:", initialLimit);
             },
             error: function(xhr, status, error) {
-                console.error("Gagal mengambil session:", error);
+                console.error("Gagal mengambil session:", error, "Response:", xhr.responseText);
                 recordsPerPage = 10;
                 $('#recordsPerPage').val(recordsPerPage);
                 loadData(1); // Fallback ke halaman 1 jika session gagal
@@ -41,7 +43,6 @@
                 </select>
             </div>
         `;
-        // Masukkan dropdown ke elemen dengan ID 'recordsPerPageContainer' di HTML
         $('#recordsPerPageContainer').html(recordsDropdown);
 
         // Set nilai awal dropdown sesuai dengan recordsPerPage default
@@ -49,9 +50,7 @@
 
         // Event listener untuk perubahan pada dropdown records per page
         $('#recordsPerPage').on('change', function() {
-            // Ambil nilai baru dari dropdown dan konversi ke integer
             recordsPerPage = parseInt($(this).val());
-            // Simpan recordsPerPage dan reset ke halaman 1 ke session
             $.ajax({
                 url: 'aplikasi/stockopname/actionstop/save_page.php',
                 method: 'POST',
@@ -66,7 +65,6 @@
                     console.error("Gagal menyimpan records per page ke session:", error);
                 }
             });
-            // Muat ulang data dengan halaman pertama
             loadData(1);
         });
 
@@ -86,38 +84,32 @@
                     console.log("Data diterima:", response);
 
                     var html = "";
-                    // Jika tidak ada data, tampilkan pesan "Tidak ada data"
                     if (response.data.length === 0) {
                         html = "<tr><td colspan='17' class='text-center'>Tidak ada data yang ditemukan.</td></tr>";
                     } else {
-                        // Loop melalui data yang diterima dan buat baris tabel
                         $.each(response.data, function(index, row) {
                             html += "<tr>";
-                            // Nomor urut berdasarkan halaman dan indeks
                             html += "<td>" + ((page - 1) * recordsPerPage + index + 1) + "</td>";
-                            html += "<td>" + (row.ippc || '') + "</td>"; // IP PC, gunakan string kosong jika null
-                            html += "<td>" + (row.idpc || '') + "</td>"; // ID PC
-                            html += "<td>" + (row.user || '') + "</td>"; // User
-                            html += "<td>" + (row.namapc || '') + "</td>"; // Nama PC
-                            html += "<td>" + (row.bagian || '') + "</td>"; // Bagian
-                            html += "<td>" + (row.subbagian || '') + "</td>"; // Sub Bagian
-                            html += "<td>" + (row.lokasi || '') + "</td>"; // Lokasi
-                            html += "<td>" + (row.prosesor || '') + "</td>"; // Prosesor
-                            html += "<td>" + (row.mobo || '') + "</td>"; // Motherboard
-                            html += "<td>" + (row.ram || '') + "</td>"; // RAM
-                            html += "<td>" + (row.harddisk || '') + "</td>"; // Harddisk
-                            html += "<td>" + (row.bulan || '') + "</td>"; // Bulan
-                            html += "<td>" + (row.tgl_perawatan ? row.tgl_perawatan : '') + "</td>"; // Tanggal Perawatan, gunakan string kosong jika null
-                            // Formulir untuk tombol "Perawatan"
+                            html += "<td>" + (row.ippc || '') + "</td>";
+                            html += "<td>" + (row.idpc || '') + "</td>";
+                            html += "<td>" + (row.user || '') + "</td>";
+                            html += "<td>" + (row.namapc || '') + "</td>";
+                            html += "<td>" + (row.bagian || '') + "</td>";
+                            html += "<td>" + (row.subbagian || '') + "</td>";
+                            html += "<td>" + (row.lokasi || '') + "</td>";
+                            html += "<td>" + (row.prosesor || '') + "</td>";
+                            html += "<td>" + (row.mobo || '') + "</td>";
+                            html += "<td>" + (row.ram || '') + "</td>";
+                            html += "<td>" + (row.harddisk || '') + "</td>";
+                            html += "<td>" + (row.bulan || '') + "</td>";
+                            html += "<td>" + (row.tgl_perawatan ? row.tgl_perawatan : '') + "</td>";
                             html += '<td class="center"><form action="user.php?menu=fupdate_pemakaipc2" method="post">';
                             html += '<input type="hidden" name="nomor" value="' + (row.nomor || '') + '" />';
                             html += '<button class="btn btn-primary" type="submit">Perawatan</button></form></td>';
-                            // Formulir untuk tombol "Update"
                             html += '<td class="center"><form action="user.php?menu=updatestockop" method="post">';
                             html += '<input type="hidden" name="id" value="' + (row.id || '') + '" />';
                             html += '<input type="hidden" name="nomor" value="' + (row.nomor || '') + '" />';
                             html += '<button class="btn btn-primary" type="submit">Update</button></form></td>';
-                            // Formulir untuk tombol "Hapus" dengan konfirmasi
                             html += '<td class="center"><form action="aplikasi/stockopname/actionstop/stc_deletdatas.php" method="post">';
                             html += '<input type="hidden" name="id" value="' + (row.id || '') + '" />';
                             html += '<input type="hidden" name="nomor" value="' + (row.nomor || '') + '" />';
@@ -134,11 +126,10 @@
 
                     // Generate HTML untuk pagination dengan batasan nomor halaman (maksimal 5 nomor ditampilkan)
                     var totalPages = response.totalPages;
-                    var maxVisiblePages = 5; // Jumlah maksimum nomor halaman yang ditampilkan
+                    var maxVisiblePages = 5;
                     var paginationHTML = '<div class="pagination">';
                     var startPage, endPage;
 
-                    // Logika untuk menentukan rentang nomor halaman yang akan ditampilkan
                     if (totalPages <= maxVisiblePages) {
                         startPage = 1;
                         endPage = totalPages;
@@ -156,10 +147,7 @@
                         }
                     }
 
-                    // Tambahkan tombol "Previous"
                     paginationHTML += '<button class="btn btn-secondary prev-btn' + (page === 1 ? ' disabled' : '') + '" data-page="' + (page - 1) + '">Previous</button>';
-
-                    // Tambahkan nomor halaman dengan tanda "..."
                     if (totalPages > 3) {
                         if (startPage > 1) {
                             paginationHTML += '<button class="btn btn-secondary dots-btn" data-action="start">...</button>';
@@ -175,21 +163,14 @@
                             paginationHTML += '<button class="btn btn-secondary page-btn' + (i === page ? ' active' : '') + '" data-page="' + i + '">' + i + '</button>';
                         }
                     }
-
-                    // Tambahkan tombol "Next"
                     paginationHTML += '<button class="btn btn-secondary next-btn' + (page === totalPages ? ' disabled' : '') + '" data-page="' + (page + 1) + '">Next</button>';
-
                     paginationHTML += '</div>';
-                    // Masukkan HTML pagination ke elemen dengan ID 'pagination'
                     $("#pagination").html(paginationHTML);
-
-                    // Re-bind event listeners untuk pagination setelah pembaruan
                     bindPaginationEvents();
                 },
                 error: function(xhr, status, error) {
-                    // Tangani error dari AJAX request
-                    console.error("AJAX Error:", status, error);
-                    console.log("Response:", xhr.responseText);
+                    console.error("AJAX Error:", status, error, "Response:", xhr.responseText);
+                    $("#pagination").html('<div class="pagination"><p>Error: Gagal memuat pagination.</p></div>');
                     alert("Terjadi kesalahan: " + (xhr.responseText || "Koneksi gagal, coba lagi nanti."));
                 }
             });
@@ -197,14 +178,11 @@
 
         // Fungsi untuk mengikat event listener ke tombol pagination
         function bindPaginationEvents() {
-            // Hapus event listener lama untuk mencegah duplikasi
             $(document).off("click", ".page-btn, .prev-btn, .next-btn").on("click", ".page-btn, .prev-btn, .next-btn", function() {
                 console.log("Clicked pagination button:", $(this).data("page"));
                 if (!$(this).hasClass('disabled')) {
                     var page = $(this).data("page");
-                    // Muat data untuk halaman yang dipilih
                     loadData(page);
-                    // Simpan halaman saat ini ke session
                     $.ajax({
                         url: 'aplikasi/stockopname/actionstop/save_page.php',
                         method: 'POST',
@@ -217,26 +195,28 @@
                             console.log("Halaman disimpan ke session:", page, "Response:", data);
                         },
                         error: function(xhr, status, error) {
-                            console.error("Gagal menyimpan halaman ke session:", error);
-                            console.log("Response dari save_page.php:", xhr.responseText);
+                            console.error("Gagal menyimpan halaman ke session:", error, "Response:", xhr.responseText);
                             alert("Gagal menyimpan status halaman. Silakan coba lagi.");
                         }
                     });
                 }
             });
 
-            // Event listener untuk tombol "..." (tetap sama)
             $(document).off("click", ".dots-btn").on("click", ".dots-btn", function(e) {
-                console.log("Clicked dots button");
-                showPageInput(e); // Tampilkan popup untuk input nomor halaman
+                console.log("Clicked dots button, attempting to show popup");
+                if ($('.pageInputPopup').length === 0) { // Pastikan tidak ada popup yang sudah ada
+                    showPageInput(e);
+                } else {
+                    console.log("Popup already exists, ignoring click");
+                }
             });
         }
 
         // Fungsi untuk menampilkan popup input nomor halaman saat tombol "..." diklik
         function showPageInput(position) {
-            var popup = $('<div id="pageInputPopup" style="position: absolute; background: white; border: 1px solid #ccc; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;"></div>');
+            var popup = $('<div class="pageInputPopup" style="position: absolute; background: white; border: 1px solid #ccc; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;"></div>');
             var input = $('<input type="number" id="pageNumber" min="1" style="padding: 5px; width: 100px; margin-right: 5px;">');
-            var submitBtn = $('<button style="padding: 5px 10px; cursor: pointer;">Go</button>');
+            var submitBtn = $('<button style="padding: 5px 10px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 3px;">Go</button>');
 
             popup.append(input).append(submitBtn);
             var $dotsBtn = $(position.target);
@@ -246,11 +226,10 @@
 
             // Event listener untuk submit via Enter
             input.on('keypress', function(e) {
-                if (e.which === 13) { // Enter key
-                    var page = parseInt($(this).val());
+                if (e.which === 13) {
+                    var page = parseInt($(this).val()) || 1;
                     if (page >= 1 && page <= totalPagesGlobal) {
-                        loadData(page); // Muat data untuk halaman yang dimasukkan
-                        // Simpan ke session
+                        loadData(page);
                         $.ajax({
                             url: 'aplikasi/stockopname/actionstop/save_page.php',
                             method: 'POST',
@@ -266,8 +245,8 @@
                                 console.error("Gagal menyimpan halaman via Enter:", error);
                             }
                         });
-                        $('#pageInputPopup').remove(); // Hapus popup
-                        bindPaginationEvents(); // Re-bind event listeners
+                        $('.pageInputPopup').remove();
+                        bindPaginationEvents();
                     } else {
                         alert('Masukkan nomor halaman yang valid (1-' + totalPagesGlobal + ')');
                     }
@@ -276,10 +255,9 @@
 
             // Event listener untuk tombol "Go"
             submitBtn.on('click', function() {
-                var page = parseInt(input.val());
+                var page = parseInt(input.val()) || 1;
                 if (page >= 1 && page <= totalPagesGlobal) {
-                    loadData(page); // Muat data untuk halaman yang dimasukkan
-                    // Simpan ke session
+                    loadData(page);
                     $.ajax({
                         url: 'aplikasi/stockopname/actionstop/save_page.php',
                         method: 'POST',
@@ -295,42 +273,40 @@
                             console.error("Gagal menyimpan halaman via Go:", error);
                         }
                     });
-                    $('#pageInputPopup').remove(); // Hapus popup
-                    bindPaginationEvents(); // Re-bind event listeners
+                    $('.pageInputPopup').remove();
+                    bindPaginationEvents();
                 } else {
                     alert('Masukkan nomor halaman yang valid (1-' + totalPagesGlobal + ')');
                 }
             });
 
             // Event listener untuk menutup popup jika klik di luar
-            $(document).on("click", function(e) {
+            $(document).on("click.pagePopup", function(e) {
                 if (!popup.is(e.target) && popup.has(e.target).length === 0) {
                     console.log("Popup closed by clicking outside");
-                    popup.remove(); // Hapus popup
-                    bindPaginationEvents(); // Re-bind event listeners
-                    $(document).off("click");
+                    $('.pageInputPopup').remove();
+                    bindPaginationEvents();
+                    $(document).off("click.pagePopup");
                 }
             });
         }
 
         // Event listener untuk formulir penghapusan data (tombol "Hapus")
         $('#dataBody').on('submit', 'form[action="aplikasi/stockopname/actionstop/stc_deletdatas.php"]', function(e) {
-            e.preventDefault(); // Hentikan submit default untuk menghindari reload halaman
+            e.preventDefault();
 
             if (confirm('Apakah Anda yakin akan menghapus data ini?')) {
                 var form = $(this);
                 $.ajax({
-                    url: form.attr('action'), // URL untuk menghapus data (stc_deletdatas.php)
-                    method: 'POST', // Metode HTTP POST
-                    data: form.serialize(), // Data dari formulir (id dan nomor)
-                    dataType: 'json', // Harapkan respons dalam format JSON
+                    url: form.attr('action'),
+                    method: 'POST',
+                    data: form.serialize(),
+                    dataType: 'json',
                     success: function(response) {
                         console.log("Respons dari penghapusan:", response);
                         if (response.status === "success") {
                             alert(response.message);
-                            // Muat ulang data pada halaman yang dikembalikan oleh server
                             loadData(response.currentPage);
-                            // Simpan halaman saat ini ke session
                             $.ajax({
                                 url: 'aplikasi/stockopname/actionstop/save_page.php',
                                 method: 'POST',
@@ -338,7 +314,7 @@
                                     page: response.currentPage,
                                     recordsPerPage: recordsPerPage
                                 },
-                                dataType: 'json', // Harapkan respons JSON
+                                dataType: 'json',
                                 success: function(data) {
                                     console.log("Halaman dan records per page disimpan ke session:", data);
                                 },
@@ -353,7 +329,6 @@
                         }
                     },
                     error: function(xhr, status, error) {
-                        // Tangani error dari AJAX request penghapusan
                         console.error("Error saat menghapus:", error);
                         console.log("Response:", xhr.responseText);
                         alert("Terjadi kesalahan saat menghapus data: " + (xhr.responseText || "Koneksi gagal, coba lagi nanti."));
