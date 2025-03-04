@@ -1,6 +1,6 @@
 <?php
-// Include konfigurasi database dari root
-//include('../../../config.php'); // Dari stockopname -> aplikasi -> simitdlPHP8
+session_start();
+include('../../config.php');
 
 // Periksa apakah id dan nomor dikirim melalui POST
 if (isset($_POST['id']) && isset($_POST['nomor'])) {
@@ -64,6 +64,23 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
     exit;
 }
 
-// Include file HTML
-include('update_index.php'); // Path relatif dari stockopname
+// Panggil save_lastpage.php untuk menyimpan status saat ini
+$saveLastPageUrl = 'http://localhost/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
+$ch = curl_init($saveLastPageUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+    'page' => isset($_SESSION['current_page']) ? $_SESSION['current_page'] : 1,
+    'recordsPerPage' => isset($_SESSION['records_per_page']) ? $_SESSION['records_per_page'] : 10
+]));
+$response = curl_exec($ch);
+if ($response === false) {
+    error_log("Gagal memanggil save_lastpage.php saat Update: " . curl_error($ch));
+} else {
+    error_log("Respons dari save_lastpage.php saat Update: " . $response);
+}
+curl_close($ch);
+
+// Include file HTML untuk formulir
+include('update_index.php');
 ?>

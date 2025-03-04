@@ -14,13 +14,22 @@
             dataType: 'json',
             success: function(response) {
                 console.log("Respons dari save_page.php:", response);
-                const initialPage = response.current_page ? parseInt(response.current_page) : 1;
-                const initialLimit = response.records_per_page ? parseInt(response.records_per_page) : 10;
+                const sessionPage = parseInt(response.current_page) || 1;
+                const sessionLimit = parseInt(response.records_per_page) || 10;
+                const lastPage = parseInt(response.last_page) || 1;
+                const lastLimit = parseInt(response.last_limit) || 10;
+
+                // Deteksi refresh sengaja
+                const isRefresh = performance.navigation.type === 1 || window.performance.getEntriesByType("navigation")[0].type === "reload";
+
+                // Logika: Jika ada last_page dan bukan refresh, gunakan last_page; jika refresh, reset ke 1
+                const initialPage = (lastPage > 1 && !isRefresh) ? lastPage : 1;
+                const initialLimit = (lastLimit > 10 && !isRefresh) ? lastLimit : 10;
 
                 recordsPerPage = initialLimit;
                 $('#recordsPerPage').val(recordsPerPage);
-                loadData(initialPage); // Muat data dengan halaman dari session
-                console.log("Initial load with page:", initialPage, "limit:", initialLimit);
+                loadData(initialPage); // Muat data dengan halaman dari last_page jika bukan refresh
+                console.log("Initial load with page:", initialPage, "limit:", initialLimit, "isRefresh:", isRefresh, "lastPage:", lastPage);
             },
             error: function(xhr, status, error) {
                 console.error("Gagal mengambil session:", error, "Response:", xhr.responseText);
@@ -39,6 +48,7 @@
                     <option value="25">25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
+                    <option value="250">250</option>
                 </select>
             </div>
         `;
@@ -203,7 +213,7 @@
 
             $(document).off("click", ".dots-btn").on("click", ".dots-btn", function(e) {
                 console.log("Clicked dots button, attempting to show popup");
-                if ($('.pageInputPopup').length === 0) { // Pastikan tidak ada popup yang sudah ada
+                if ($('.pageInputPopup').length === 0) {
                     showPageInput(e);
                 } else {
                     console.log("Popup already exists, ignoring click");
