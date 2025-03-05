@@ -1,13 +1,33 @@
 <?php
-session_start();
-include('../../config.php');
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Sesuaikan path inklusi config.php
+include(dirname(dirname(dirname(__FILE__))) . '/config.php');
+
+// Panggil save_lastpage.php untuk menyimpan status saat ini sebelum menampilkan form
+$saveLastPageUrl = 'http://localhost/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
+$ch = curl_init($saveLastPageUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+    'page' => isset($_SESSION['current_page']) ? $_SESSION['current_page'] : 1,
+    'recordsPerPage' => isset($_SESSION['records_per_page']) ? $_SESSION['records_per_page'] : 10
+]));
+$response = curl_exec($ch);
+if ($response === false) {
+    error_log("Gagal memanggil save_lastpage.php saat Update: " . curl_error($ch));
+} else {
+    error_log("Respons dari save_lastpage.php saat Update: " . $response);
+}
+curl_close($ch);
 
 // Periksa apakah id dan nomor dikirim melalui POST
 if (isset($_POST['id']) && isset($_POST['nomor'])) {
     $id = $_POST['id'];
     $nomor = $_POST['nomor'];
 
-    // Query untuk mengambil data dari pcaktif berdasarkan id dan nomor
     $sql = "SELECT * FROM pcaktif WHERE id = ? AND nomor = ?";
     $params = [$id, $nomor];
     $stmt = sqlsrv_query($conn, $sql, $params);
@@ -17,7 +37,6 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
     }
 
     if ($result = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        // Ekstrak semua kolom ke variabel
         $nomor = $result['nomor'];
         $user = $result['user'];
         $divisi = $result['divisi'];
@@ -47,13 +66,11 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
         $dvd = $result['dvd'];
         $seri = $result['seri'];
 
-        // Ambil nama bulan dari tabel bulan
         $sql_bulan = "SELECT bulan FROM bulan WHERE id_bulan = ?";
         $params_bulan = [$bulan];
         $stmt_bulan = sqlsrv_query($conn, $sql_bulan, $params_bulan);
         $namabulan = ($dataa = sqlsrv_fetch_array($stmt_bulan, SQLSRV_FETCH_ASSOC)) ? $dataa['bulan'] : '';
 
-        // Format tanggal update ke YYYY-MM-DD
         $tglupdate = ($tgl_update instanceof DateTime) ? $tgl_update->format('Y-m-d') : substr($tgl_update, 0, 10);
     } else {
         echo "Data tidak ditemukan untuk id: $id dan nomor: $nomor";
@@ -64,23 +81,5 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
     exit;
 }
 
-// Panggil save_lastpage.php untuk menyimpan status saat ini
-$saveLastPageUrl = 'http://localhost/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
-$ch = curl_init($saveLastPageUrl);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-    'page' => isset($_SESSION['current_page']) ? $_SESSION['current_page'] : 1,
-    'recordsPerPage' => isset($_SESSION['records_per_page']) ? $_SESSION['records_per_page'] : 10
-]));
-$response = curl_exec($ch);
-if ($response === false) {
-    error_log("Gagal memanggil save_lastpage.php saat Update: " . curl_error($ch));
-} else {
-    error_log("Respons dari save_lastpage.php saat Update: " . $response);
-}
-curl_close($ch);
-
-// Include file HTML untuk formulir
 include('update_index.php');
 ?>

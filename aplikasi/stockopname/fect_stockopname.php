@@ -1,66 +1,82 @@
 <?php
-include('../../config.php'); // Pastikan path config.php benar
+// Sesuaikan path inklusi config.php ke root proyek
+include(dirname(dirname(dirname(__FILE__))) . '/config.php');
 
 // Validasi koneksi database
 if ($conn === false) {
     header('Content-Type: application/json');
     die(json_encode([
-        "error" => "Koneksi database gagal",
+        "status" => "error",
+        "message" => "Koneksi database gagal",
         "details" => sqlsrv_errors()
     ]));
 }
 
-// Ambil halaman dan limit dari request, default halaman pertama (1) dan limit 10
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10; // Default 10 jika tidak ada limit
-$offset = ($page - 1) * $limit; // Mulai dari row ke-berapa
+// Ambil parameter dari request GET dengan sanitasi dan default value
+$page = isset($_GET['page']) && is_numeric($_GET['page']) && $_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+$limit = isset($_GET['limit']) && is_numeric($_GET['limit']) && $_GET['limit'] > 0 ? (int)$_GET['limit'] : 10;
 
-// Query dengan pagination menggunakan ROW_NUMBER dan ORDER BY id ASC
+// Validasi batasan limit (misalnya maksimum 250 untuk mencegah beban berlebih)
+$limit = min($limit, 250);
+
+// Hitung offset untuk pagination
+$offset = ($page - 1) * $limit;
+
+// Query utama dengan pagination menggunakan ROW_NUMBER
 $sql = "SELECT * FROM (
     SELECT ROW_NUMBER() OVER (ORDER BY id ASC) AS RowNum, 
            id, nomor, ippc, idpc, [user], namapc, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, bulan, tgl_perawatan, tgl_update
     FROM pcaktif
 ) AS RowConstrainedResult
 WHERE RowNum > ? AND RowNum <= ?";
-$params = array($offset, $offset + $limit);
+$params = [$offset, $offset + $limit];
 $query = sqlsrv_query($conn, $sql, $params);
 
-// Periksa apakah query berhasil
+// Periksa apakah query utama berhasil
 if ($query === false) {
     header('Content-Type: application/json');
     die(json_encode([
-        "error" => "Query utama gagal",
+        "status" => "error",
+        "message" => "Gagal menjalankan query utama",
         "sql" => $sql,
         "params" => $params,
         "details" => sqlsrv_errors()
     ]));
 }
 
-// Ambil data
+// Ambil data dan format tanggal serta nama bulan
 $data = [];
 while ($row = sqlsrv_fetch_array($query, SQLSRV_FETCH_ASSOC)) {
     // Format tanggal jika ada
     if (isset($row['tgl_perawatan']) && $row['tgl_perawatan'] instanceof DateTime) {
         $row['tgl_perawatan'] = $row['tgl_perawatan']->format('Y-m-d');
+    } elseif (isset($row['tgl_perawatan'])) {
+        $row['tgl_perawatan'] = ''; // Default jika bukan DateTime
     }
+
     if (isset($row['tgl_update']) && $row['tgl_update'] instanceof DateTime) {
         $row['tgl_update'] = $row['tgl_update']->format('Y-m-d');
+    } elseif (isset($row['tgl_update'])) {
+        $row['tgl_update'] = ''; // Default jika bukan DateTime
     }
 
     // Ambil nama bulan dari tabel bulan
-    $bulanQuery = sqlsrv_query($conn, "SELECT bulan FROM bulan WHERE id_bulan = ?", array($row['bulan']));
-    if ($bulanQuery === false) {
-        $row['bulan'] = "Error: " . print_r(sqlsrv_errors(), true);
-    } elseif ($bulanData = sqlsrv_fetch_array($bulanQuery, SQLSRV_FETCH_ASSOC)) {
-        $row['bulan'] = $bulanData['bulan'];
-    } else {
-        $row['bulan'] = "Tidak Diketahui";
+    if (isset($row['bulan'])) {
+        $bulanQuery = sqlsrv_query($conn, "SELECT bulan FROM bulan WHERE id_bulan = ?", [$row['bulan']]);
+        if ($bulanQuery === false) {
+            $row['bulan'] = "Error: " . print_r(sqlsrv_errors(), true);
+        } elseif ($bulanData = sqlsrv_fetch_array($bulanQuery, SQLSRV_FETCH_ASSOC)) {
+            $row['bulan'] = $bulanData['bulan'];
+        } else {
+            $row['bulan'] = "Tidak Diketahui";
+        }
+        sqlsrv_free_stmt($bulanQuery); // Bebaskan resource
     }
 
     $data[] = $row;
 }
 
-// Bebaskan resource query
+// Bebaskan resource query utama
 sqlsrv_free_stmt($query);
 
 // Hitung total data untuk pagination
@@ -68,7 +84,8 @@ $countQuery = sqlsrv_query($conn, "SELECT COUNT(*) as total FROM pcaktif");
 if ($countQuery === false) {
     header('Content-Type: application/json');
     die(json_encode([
-        "error" => "Query count gagal",
+        "status" => "error",
+        "message" => "Gagal menghitung total data",
         "details" => sqlsrv_errors()
     ]));
 }
@@ -79,12 +96,16 @@ $totalPages = ceil($totalData['total'] / $limit);
 // Bebaskan resource count query
 sqlsrv_free_stmt($countQuery);
 
+// Tutup koneksi database
+sqlsrv_close($conn);
+
 // Kirim response JSON
 header('Content-Type: application/json');
 echo json_encode([
+    "status" => "success",
     "data" => $data,
     "totalPages" => $totalPages,
     "currentPage" => $page,
-    "status" => "success"
+    "recordsPerPage" => $limit
 ]);
 ?>

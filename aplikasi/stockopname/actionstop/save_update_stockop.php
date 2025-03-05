@@ -1,16 +1,10 @@
 <?php
-// Mulai session untuk mengakses dan menyimpan data halaman
 session_start();
-
-// Include konfigurasi database dari level atas
 include('../../../config.php');
 
-// Debug session sebelum proses
 error_log("Session sebelum update: " . print_r($_SESSION, true));
 
-// Periksa apakah request adalah POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Ambil semua data dari form
     $id = $_POST['id'];
     $nomor = $_POST['nomor'];
     $tgl_update = $_POST['tgl_update'];
@@ -39,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $seri = $_POST['seri'];
     $bulan = $_POST['bulan'];
 
-    // Query untuk update data di tabel pcaktif
     $sql = "UPDATE pcaktif SET 
                 tgl_update = ?, 
                 divisi = ?, 
@@ -68,28 +61,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 bulan = ?
             WHERE id = ? AND nomor = ?";
     
-    $params = [
-        $tgl_update, $divisi, $bagian, $subbagian, $lokasi, $user, $idpc, $namapc, 
-        $os, $ippc, $harddisk, $ram, $monitor, $model, $ram1, $ram2, $hd1, $hd2, 
-        $mobo, $prosesor, $powersuply, $cassing, $dvd, $seri, $bulan, $id, $nomor
-    ];
+    $params = [$tgl_update, $divisi, $bagian, $subbagian, $lokasi, $user, $idpc, $namapc, 
+               $os, $ippc, $harddisk, $ram, $monitor, $model, $ram1, $ram2, $hd1, $hd2, 
+               $mobo, $prosesor, $powersuply, $cassing, $dvd, $seri, $bulan, $id, $nomor];
 
     $stmt = sqlsrv_query($conn, $sql, $params);
 
-    // Periksa apakah query berhasil
     if ($stmt === false) {
         error_log("Gagal menyimpan data: " . print_r(sqlsrv_errors(), true));
-        echo ("Gagal menyimpan data: " . print_r(sqlsrv_errors(), true));
+        echo "Gagal menyimpan data: " . print_r(sqlsrv_errors(), true);
         exit;
     } else {
-        // Panggil save_lastpage.php untuk memastikan session diperbarui dengan last_page
+        // Panggil save_lastpage.php untuk memperbarui dengan current_page
         $url = 'http://localhost/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-            'page' => isset($_SESSION['last_page']) ? $_SESSION['last_page'] : 1,
-            'recordsPerPage' => isset($_SESSION['last_limit']) ? $_SESSION['last_limit'] : 10
+            'page' => isset($_SESSION['current_page']) ? $_SESSION['current_page'] : 1,
+            'recordsPerPage' => isset($_SESSION['records_per_page']) ? $_SESSION['records_per_page'] : 10
         ]));
         $response = curl_exec($ch);
         if ($response === false) {
@@ -99,25 +89,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         curl_close($ch);
 
-        // Ambil dan perbarui session dengan nilai terakhir untuk konfirmasi
-        $currentPage = isset($_SESSION['current_page']) && $_SESSION['current_page'] > 0 ? (int)$_SESSION['current_page'] : (isset($_SESSION['last_page']) ? (int)$_SESSION['last_page'] : 1);
-        $recordsPerPage = isset($_SESSION['records_per_page']) && $_SESSION['records_per_page'] > 0 ? (int)$_SESSION['records_per_page'] : (isset($_SESSION['last_limit']) ? (int)$_SESSION['last_limit'] : 10);
+        // Perbarui session dengan nilai terakhir
+        $currentPage = isset($_SESSION['last_page']) && $_SESSION['last_page'] > 0 ? (int)$_SESSION['last_page'] : (isset($_SESSION['current_page']) ? (int)$_SESSION['current_page'] : 1);
+        $recordsPerPage = isset($_SESSION['last_limit']) && $_SESSION['last_limit'] > 0 ? (int)$_SESSION['last_limit'] : (isset($_SESSION['records_per_page']) ? (int)$_SESSION['records_per_page'] : 10);
         $_SESSION['current_page'] = $currentPage;
         $_SESSION['records_per_page'] = $recordsPerPage;
         error_log("Session dikonfirmasi sebelum redirect: current_page = $currentPage, records_per_page = $recordsPerPage");
 
-        // Redirect ke user.php tanpa parameter page dan limit di URL
+        // Redirect ke user.php
         header("Location: http://localhost/simitdlPHP8/user.php?menu=stockop");
         exit;
     }
 
-    // Bebaskan resource
     sqlsrv_free_stmt($stmt);
 } else {
     echo "Metode request tidak valid.";
     exit;
 }
 
-// Tutup koneksi
 sqlsrv_close($conn);
 ?>
