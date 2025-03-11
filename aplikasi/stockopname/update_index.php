@@ -15,7 +15,7 @@
                 Tanggal Service<br>
                 <input required value="<?php echo $tglupdate; ?>" type="text" id="from" name="tgl_update" class="isi_tabel" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
                 <a href="javascript:void(0)" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
-                    <img name="popcal" align="absmiddle" style="border:none" src="../../calender/calender.jpeg" width="34" height="29" border="0" alt="">
+                    <img name="popcal" align="absmiddle" style="border:none" src="/simitdlPHP8/calender/calender.jpeg" width="34" height="29" border="0" alt="">
                 </a>
             </div>
 
@@ -350,4 +350,4 @@
 </body>
 </html>
 
-<iframe width="174" height="189" name="gToday:normal:../../calender/agenda.js" id="gToday:normal:../../calender/agenda.js" src="../../calender/ipopeng.htm" scrolling="no" frameborder="0" style="visibility:visible; z-index:999; position:absolute; top:-500px; left:-500px;"></iframe>
+<iframe width="174" height="189" name="gToday:normal:/simitdlPHP8/calender/agenda.js" id="gToday:normal:/simitdlPHP8/calender/agenda.js" src="/simitdlPHP8/calender/ipopeng.htm" scrolling="no" frameborder="0" style="visibility:visible; z-index:999; position:absolute; top:-500px; left:-500px;"></iframe>
