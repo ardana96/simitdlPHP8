@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../../../config.php');
+$base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
 
 error_log("Session sebelum update: " . print_r($_SESSION, true));
 
@@ -73,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         exit;
     } else {
         // Panggil save_lastpage.php untuk memperbarui dengan current_page
-        $url = 'http://localhost/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
+        $url = $base_url . '/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         error_log("Session dikonfirmasi sebelum redirect: current_page = $currentPage, records_per_page = $recordsPerPage");
 
         // Redirect ke user.php
-        header("Location: http://localhost/simitdlPHP8/user.php?menu=stockop");
+        header("Location: $base_url/simitdlPHP8/user.php?menu=stockop");
         exit;
     }
 

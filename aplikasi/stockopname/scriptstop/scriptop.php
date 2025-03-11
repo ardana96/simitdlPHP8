@@ -96,7 +96,7 @@
                             html += "<td>" + (row.harddisk || '') + "</td>";
                             html += "<td>" + (row.bulan || '') + "</td>";
                             html += "<td>" + (row.tgl_perawatan ? row.tgl_perawatan : '') + "</td>";
-                            html += '<td class="center"><form action="user.php?menu=fupdate_pemakaipc2" method="post"><input type="hidden" name="nomor" value="' + (row.nomor || '') + '" /><button class="btn btn-primary" type="submit">Perawatan</button></form></td>';
+                            html += '<td class="center">' +'<form action="user.php?menu=fupdate_pemakaipc2" method="post">' +'<input type="hidden" name="nomor" value="' + (row.nomor || '') + '" />' +'<input type="hidden" name="id" value="' + (row.id || '') + '" />' +'<button class="btn btn-primary" type="submit">Perawatan</button>' +'</form>' +'</td>';
                             html += '<td class="center"><form action="user.php?menu=updatestockop" method="post"><input type="hidden" name="id" value="' + (row.id || '') + '" /><input type="hidden" name="nomor" value="' + (row.nomor || '') + '" /><button class="btn btn-primary" type="submit">Update</button></form></td>';
                             html += '<td class="center"><form action="aplikasi/stockopname/actionstop/stc_deletdatas.php" method="post"><input type="hidden" name="id" value="' + (row.id || '') + '" /><input type="hidden" name="nomor" value="' + (row.nomor || '') + '" /><button class="btn btn-danger" type="submit">X</button></form></td>';
                             html += "</tr>";

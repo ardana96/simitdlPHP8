@@ -7,7 +7,9 @@ if (session_status() == PHP_SESSION_NONE) {
 include(dirname(dirname(dirname(__FILE__))) . '/config.php');
 
 // Panggil save_lastpage.php untuk menyimpan status saat ini sebelum menampilkan form
-$saveLastPageUrl = 'http://localhost/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php';
+$base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
+$saveLastPageUrl = $base_url . "/simitdlPHP8/aplikasi/stockopname/actionstop/save_lastpage.php";
+
 $ch = curl_init($saveLastPageUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
