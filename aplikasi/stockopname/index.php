@@ -71,8 +71,10 @@
                         </div>
                         <div class="row" style="margin-top: 10px;">
                             <div class="col-md-12 text-right">
+                            <button type="button" id="exportExcelBtn" class="btn btn-success" >Export Excel</button>
+                                <button type="button" id="exportPdfBtn" class="btn btn-pdf" style="background-color: #ff4040; color: white;">Export PDF</button>
                                 <button type="button" id="searchBtn" class="btn btn-primary">Cari</button>
-                                <button type="button" id="resetBtn" class="btn btn-secondary" style="margin-left: 10px;">Reset</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary" >Reset</button>
                             </div>
                         </div>
                     </form>

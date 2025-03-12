@@ -329,6 +329,82 @@
             loadData(currentPage, true);
         });
 
+        // Fungsi untuk tombol Export PDF
+        $('#exportPdfBtn').on('click', function() {
+            // Ambil data filter dari form
+            let exportFilterData = {
+                divisi: $('#divisi').val(),
+                bagian: $('#bagian').val(),
+                subBagian: $('#subBagian').val(),
+                lokasi: $('#lokasi').val(),
+                bulan: $('#bulan').val(),
+                pcLaptop: $('#pcLaptop').val()
+            };
+
+            console.log('Payload yang dikirim untuk Export PDF:', exportFilterData);
+
+            // Kirim data filter ke export_data.php menggunakan AJAX
+            $.ajax({
+                url: 'aplikasi/stockopname/actionstop/export_data.php',
+                method: 'POST',
+                data: exportFilterData,
+                dataType: 'json',
+                timeout: 10000,
+                success: function(response) {
+                    console.log('Respons dari export_data.php:', response);
+                    if (response.status === 'success' && response.pdfUrl) {
+                        // Buka PDF di tab baru atau unduh
+                        window.open(response.pdfUrl, '_blank');
+                    } else {
+                        alert('Gagal mengekspor PDF: ' + (response.message || 'Error tidak diketahui'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Gagal mengekspor PDF:', status, error, xhr.responseText);
+                    alert('Terjadi kesalahan saat mengekspor PDF: ' + (xhr.responseText || 'Koneksi gagal'));
+                }
+            });
+        });
+
+        // Fungsi untuk tombol Export Excel
+        $('#exportExcelBtn').on('click', function() {
+            // Ambil data filter dari form
+            let exportFilterData = {
+                divisi: $('#divisi').val(),
+                bagian: $('#bagian').val(),
+                subBagian: $('#subBagian').val(),
+                lokasi: $('#lokasi').val(),
+                bulan: $('#bulan').val(),
+                pcLaptop: $('#pcLaptop').val()
+            };
+
+            console.log('Payload yang dikirim untuk Export Excel:', exportFilterData);
+
+            // Kirim data filter ke exportexcel_data.php menggunakan AJAX
+            $.ajax({
+                url: 'aplikasi/stockopname/actionstop/exportexcel_data.php',
+                method: 'POST',
+                data: exportFilterData,
+                dataType: 'json',
+                timeout: 10000,
+                success: function(response) {
+                    console.log('Respons dari exportexcel_data.php:', response);
+                    if (response.status === 'success' && response.excelUrl) {
+                        // Buka Excel di tab baru atau unduh
+                        window.open(response.excelUrl, '_blank');
+                        alert(response.message);
+                    } else {
+                        alert('Gagal mengekspor Excel: ' + (response.message || 'Error tidak diketahui'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Gagal mengekspor Excel:', status, error, xhr.responseText);
+                    alert('Terjadi kesalahan saat mengekspor Excel: ' + (xhr.responseText || 'Koneksi gagal'));
+                }
+            });
+        });
+
+
         // Fungsi untuk tombol Reset
         $('#resetBtn').on('click', function() {
             $('#filterForm')[0].reset();

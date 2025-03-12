@@ -98,3 +98,28 @@
 .panel-body {
     padding: 15px; /* Pastikan padding panel-body cukup untuk memberikan ruang */
 }
+/* Styling untuk tombol umum */
+.btn {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14pt;
+}
+
+/* Styling untuk tombol Export PDF (jika menggunakan Bootstrap) */
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Styling untuk tombol Export Excel dengan spesifikasi lebih tinggi */
+#exportExcelBtn.btn-excel {
+    background-color: #ff4040 !important; /* Pink agak ke merahan */
+    color: white !important;
+}
+
+#exportExcelBtn.btn-excel:hover {
+    background-color: #e63939 !important; /* Sedikit lebih gelap saat hover */
+}
