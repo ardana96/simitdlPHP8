@@ -140,7 +140,7 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 <body onload="document.getElementById('kd_barang').focus()">
 	<h4 align='center'>UPDATE SPESIFIKASI PC</h4>
 	<div id="info_transaksi">
-      	<form id="form_penjualan"  method="post" action="aplikasi/stockopname/Modals/simpaninputpc.php" enctype="multipart/form-data" name="postform2" >
+      	<form id="form_penjualan"  method="post" action="aplikasi/stockopname/modal/simpaninputpc.php" enctype="multipart/form-data" name="postform2" >
 	  	Nomor
 	  	<input  readonly class="form-control"  type="text" name="nomoroke" value="<?php echo kdauto("pcaktif",""); ?>" >
         Divisi                                    

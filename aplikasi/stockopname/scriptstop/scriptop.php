@@ -7,6 +7,26 @@
     let isFiltered = false;
     let filterData = {};
 
+    // Fungsi untuk mengonversi id_bulan ke nama bulan
+    function getMonthName(monthId) {
+        const months = {
+            '00': 'All Bulan',
+            '01': 'Januari',
+            '02': 'Februari',
+            '03': 'Maret',
+            '04': 'April',
+            '05': 'Mei',
+            '06': 'Juni',
+            '07': 'Juli',
+            '08': 'Agustus',
+            '09': 'September',
+            '10': 'Oktober',
+            '11': 'November',
+            '12': 'Desember'
+        };
+        return months[monthId] || monthId; // Jika tidak ada mapping, kembalikan nilai asli
+    }
+
     $(document).ready(function() {
         // Fungsi untuk mengisi dropdown dengan data unik
         function populateDropdown(column, selectId) {
@@ -103,7 +123,7 @@
             console.log("Mengambil data halaman:", page, "dengan records per page:", recordsPerPage, "forceUpdate:", forceUpdate);
 
             let url = isFiltered 
-                ? 'aplikasi/stockopname/Modals/filter_data.php'
+                ? 'aplikasi/stockopname/modal/filter_data.php'
                 : 'aplikasi/stockopname/fect_stockopname.php';
             let dataToSend = isFiltered 
                 ? { ...filterData, page: page, recordsPerPage: recordsPerPage }
@@ -136,7 +156,9 @@
                             html += "<td>" + (row.mobo || '') + "</td>";
                             html += "<td>" + (row.ram || '') + "</td>";
                             html += "<td>" + (row.harddisk || '') + "</td>";
-                            html += "<td>" + (row.bulan || '') + "</td>";
+                            // Ubah tampilan bulan menggunakan getMonthName
+                            html += "<td>" + getMonthName(row.bulan || '') + "</td>";
+                            // html += "<td>" + (row.bulan || '') + "</td>";
                             html += "<td>" + (row.tgl_perawatan ? row.tgl_perawatan : '') + "</td>";
                             html += '<td class="center"><form action="user.php?menu=fupdate_pemakaipc2" method="post"><input type="hidden" name="nomor" value="' + (row.nomor || '') + '" /><input type="hidden" name="id" value="' + (row.id || '') + '" /><button class="btn btn-primary" type="submit">Perawatan</button></form></td>';
                             html += '<td class="center"><form action="user.php?menu=updatestockop" method="post"><input type="hidden" name="id" value="' + (row.id || '') + '" /><input type="hidden" name="nomor" value="' + (row.nomor || '') + '" /><button class="btn btn-primary" type="submit">Update</button></form></td>';
