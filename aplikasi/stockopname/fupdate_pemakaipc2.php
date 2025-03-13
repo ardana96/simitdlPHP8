@@ -232,7 +232,7 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 
 
 
-    <form id="form_penjualan"  method="post" action="aplikasi/stockopname/Modals/updateperawatanpc.php" enctype="multipart/form-data" name="postform2" >
+    <form id="form_penjualan"  method="post" action="aplikasi/stockopname/modal/updateperawatanpc.php" enctype="multipart/form-data" name="postform2" >
 	   <div class="form-group">
 Tanggal Perawatan <br>
                                             

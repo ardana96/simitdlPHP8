@@ -26,7 +26,58 @@
                         <button class="btn btn-primary">Tambah PC</button>
                     </a>
                     <!-- Dropdown akan dibuat di JavaScript -->
-                   
+                    <button id="toggleFilter" class="btn btn-warning" style="margin-left: 10px;">Filter</button>
+                </div>
+                <div class="panel-body">
+                    <div id="filterContainer" style="display: none; margin-top: 20px;">
+                    <form id="filterForm">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <label for="divisi">Divisi</label>
+                                <select id="divisi" name="divisi" class="form-control">
+                                    <option value="">Pilih Divisi</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="bagian">Bagian</label>
+                                <select id="bagian" name="bagian" class="form-control">
+                                    <option value="">Pilih Bagian</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="subBagian">Sub Bagian</label>
+                                <select id="subBagian" name="subBagian" class="form-control">
+                                    <option value="">Pilih Sub Bagian</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="lokasi">Lokasi</label>
+                                <select id="lokasi" name="lokasi" class="form-control">
+                                    <option value="">Pilih Lokasi</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="bulan">Bulan</label>
+                                <select id="bulan" name="bulan" class="form-control">
+                                    <option value="">Pilih Bulan</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="pcLaptop">PC dan Laptop</label>
+                                <select id="pcLaptop" name="pcLaptop" class="form-control">
+                                    <option value="">Pilih Model</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top: 10px;">
+                            <div class="col-md-12 text-right">
+                            <button type="button" id="exportExcelBtn" class="btn btn-success" >Export Excel</button>
+                                <button type="button" id="exportPdfBtn" class="btn btn-pdf" style="background-color: #ff4040; color: white;">Export PDF</button>
+                                <button type="button" id="searchBtn" class="btn btn-primary">Cari</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary" >Reset</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
                 <div class="panel-body">
                     <div id="recordsPerPageContainer"></div>
