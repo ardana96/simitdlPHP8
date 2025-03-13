@@ -1,24 +1,22 @@
 <?php
+// Mulai output buffering untuk mencegah output yang tidak diinginkan
+ob_start();
+
 // Mulai session jika diperlukan
 session_start();
 
 // Include konfigurasi koneksi
 include('../../../config.php');
 
+// Include class PDF dengan path relatif
+require_once __DIR__ . '/pdf_class.php'; // Menggunakan __DIR__ untuk path dinamis
+
 if ($conn === false) {
-    die(json_encode(array('status' => 'error', 'message' => 'Koneksi database gagal: ' . print_r(sqlsrv_errors(), true))));
+    ob_end_clean();
+    die("Koneksi database gagal: " . print_r(sqlsrv_errors(), true));
 }
 
-// Set header agar file di-download sebagai Excel
-header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
-header("Content-Disposition: attachment; filename=daftar_pemakai_komputer_" . date('Ymd_His') . ".xls");
-header("Pragma: no-cache");
-header("Expires: 0");
-
-// Tambahkan BOM UTF-8 agar karakter terbaca dengan benar di Excel
-echo "\xEF\xBB\xBF";
-
-// Ambil data filter dari AJAX
+// Ambil data filter dari POST (dari form atau AJAX)
 $divisi = isset($_POST['divisi']) ? $_POST['divisi'] : '';
 $bagian = isset($_POST['bagian']) ? $_POST['bagian'] : '';
 $subBagian = isset($_POST['subBagian']) ? $_POST['subBagian'] : '';
@@ -27,7 +25,7 @@ $bulan = isset($_POST['bulan']) ? $_POST['bulan'] : '';
 $pcLaptop = isset($_POST['pcLaptop']) ? $_POST['pcLaptop'] : '';
 
 // Buat query SQL berdasarkan filter
-$query = "SELECT ippc, idpc, [user], namapc, divisi, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, monitor, os, bulan, tgl_perawatan, jumlah FROM [dbo].[pcaktif] WHERE 1=1";
+$query = "SELECT ippc, idpc, [user], namapc, divisi, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, monitor, os, bulan, jumlah FROM [dbo].[pcaktif] WHERE 1=1";
 $params = array();
 
 if (!empty($divisi)) {
@@ -61,16 +59,13 @@ $query .= " ORDER BY idpc ASC";
 // Eksekusi query
 $stmt = sqlsrv_query($conn, $query, $params);
 if ($stmt === false) {
-    die(json_encode(array('status' => 'error', 'message' => 'Query gagal: ' . print_r(sqlsrv_errors(), true))));
+    ob_end_clean();
+    die("Query gagal: " . print_r(sqlsrv_errors(), true));
 }
 
 // Ambil semua data
 $data = array();
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    // Jika tgl_perawatan adalah tipe DateTime, format ke string
-    if (isset($row['tgl_perawatan']) && $row['tgl_perawatan'] instanceof DateTime) {
-        $row['tgl_perawatan'] = $row['tgl_perawatan']->format('Y-m-d');
-    }
     $data[] = $row;
 }
 
@@ -78,23 +73,31 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($conn);
 
-// Jika tidak ada data, tampilkan pesan
+// Jika tidak ada data, tampilkan pesan dan hentikan
 if (empty($data)) {
-    echo "<table border='1'><tr><td colspan='15' style='text-align:center; font-weight:bold; color:red;'>Tidak ada data yang tersedia!</td></tr></table>";
-    exit;
+    ob_end_clean();
+    die("Tidak ada data yang tersedia untuk diekspor!");
 }
 
-// Simpan data ke variabel untuk dikirim ke template
-$templateData = $data;
+// Inisialisasi class PDF
+$pdf = new PDF('L', 'mm', 'A4'); // L untuk landscape, A4 sebagai ukuran kertas
+$pdf->AddPage();
 
 // Debugging: Pastikan path template benar
-$templatePath = __DIR__ . '/../export/template_excel.php';
+$templatePath = __DIR__ . '/../export/template_pdf.php';
 if (!file_exists($templatePath)) {
-    die("File template_excel.php tidak ditemukan di: " . $templatePath);
+    ob_end_clean();
+    die("File template_pdf.php tidak ditemukan di: " . $templatePath);
 }
 
-// Panggil template untuk membangun file Excel
-include '../export/template_excel.php';
+// Panggil template untuk isi tabel
+include '../export/template_pdf.php';
+
+// Bersihkan buffer sebelum mengirim PDF
+ob_end_clean();
+
+// Output file PDF
+$pdf->Output('D', 'daftar_pemakai_komputer_' . date('Ymd_His') . '.pdf');
 
 exit;
 ?>
