@@ -2,16 +2,15 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Update Spesifikasi Stock Opname</title>
-    <link rel="stylesheet" href="aplikasi/stockopname/stockopstyle/update_style.css">
+    <title>Update Spesifikasi PC</title>
+    <link rel="stylesheet" href="aplikasi/pemakaipc/style/update_style.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="aplikasi/stockopname/scriptstop/update_scriptop.php"></script>
-    
+    <script src="aplikasi/pemakaipc/scripts/script_update_pemakaipc.php"></script>
 </head>
 <body>
-    <h4 align="center">UPDATE SPESIFIKASI STOCK OPNAME</h4>
+    <h4 align="center">UPDATE SPESIFIKASI PC</h4>
     <div id="info_transaksi">
-        <form method="post" action="aplikasi/stockopname/actionstop/save_update_stockop.php" enctype="multipart/form-data" name="postform2">
+        <form method="post" action="aplikasi/pemakaipc/actions/save_update_pemakaipc.php" enctype="multipart/form-data" name="postform2">
             <div class="form-group">
                 Tanggal Service<br>
                 <input required value="<?php echo $tglupdate; ?>" type="text" id="from" name="tgl_update" class="isi_tabel" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
@@ -114,7 +113,7 @@
 
                 <?php if ($model == "CPU") { ?>
                     <div class="form-group">
-                        <b>Monitor</b><font color="red">Tidak Mengurangi Stock Hanya Merubah Nama</font>
+                        <b>Monitor</b>&nbsp;<font color="red">Tidak Mengurangi Stock Hanya Merubah Nama</font>
                         <select class="form-control" name="monitor">
                             <option value="<?php echo $monitor; ?>"><?php echo $monitor; ?></option>
                             <?php
@@ -194,7 +193,7 @@
                     </div> -->
 
                     <div class="form-group">
-                        <b>Motherboard</b><font color="red">Tidak Merubah Stock Hanya Mengganti Nama</font>
+                        <b>Motherboard</b>&nbsp;<font color="red">Tidak Merubah Stock Hanya Mengganti Nama</font>
                         <select class="form-control" name="mobo">
                             <option value="<?php echo $mobo; ?>"><?php echo $mobo; ?></option>
                             <?php
@@ -208,7 +207,7 @@
                     </div>
 
                     <div class="form-group">
-                        <b>Prosesor</b><font color="red">Tidak Merubah Stock Hanya Mengganti Nama</font>
+                        <b>Prosesor</b>&nbsp;<font color="red">Tidak Merubah Stock Hanya Mengganti Nama</font>
                         <select class="form-control" name="prosesor">
                             <option value="<?php echo $prosesor; ?>"><?php echo $prosesor; ?></option>
                             <?php
@@ -264,12 +263,12 @@
                     </div> -->
                 <?php } else { ?>
                     <div class="form-group">
-                        <b>Seri</b><font color="red">Tidak Mengurangi Stock Hanya Merubah Nama</font>
+                        <b>Seri</b>&nbsp;<font color="red">Tidak Mengurangi Stock Hanya Merubah Nama</font>
                         <input class="form-control" type="text" name="seri" value="<?php echo $seri; ?>">
                     </div>
 
                     <div class="form-group">
-                        <b>Monitor</b><font color="red">Tidak Mengurangi Stock Hanya Merubah Nama</font>
+                        <b>Monitor</b>&nbsp;<font color="red">Tidak Mengurangi Stock Hanya Merubah Nama</font>
                         <input class="form-control" type="text" name="monitor" value="<?php echo $monitor; ?>">
                     </div>
 
@@ -285,9 +284,9 @@
                     <!-- <div class="form-group">
                         <b>RAM Slot 1</b><font color="red">Tidak Merubah Stock Hanya Mengganti Nama</font>
                         <input class="form-control" type="text" name="ram1" value="<?php echo $ram1; ?>">
-                    </div> -->
+                    </div>
 
-                    <!-- <div class="form-group">
+                    <div class="form-group">
                         <b>RAM Slot 2</b><font color="red">Tidak Merubah Stock Hanya Mengganti Nama</font>
                         <input class="form-control" type="text" name="ram2" value="<?php echo $ram2; ?>">
                     </div>

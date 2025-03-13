@@ -1,0 +1,125 @@
+/* Styling untuk tabel */
+.table-responsive {
+    overflow: scroll;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+}
+
+.table-bordered {
+    border: 1px solid #ddd;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Styling untuk pagination */
+.pagination {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Styling untuk tombol pagination */
+.pagination button {
+    padding: 5px 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 4px;
+    color: #007bff; /* Ubah warna font menjadi biru (contoh: #007bff untuk biru Bootstrap) */
+}
+
+.pagination button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    border-color: #ccc;
+    color: #666; /* Warna font untuk tombol yang dinonaktifkan, opsional */
+}
+
+.pagination button.active {
+    background-color: #007bff;
+    color: white; /* Tetap putih untuk tombol aktif */
+    border-color: #007bff;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    color: #007bff; /* Warna font biru saat hover, opsional */
+}
+/* Styling untuk tombol "..." */
+.pagination .dots-btn {
+    padding: 5px 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 4px;
+    color: #007bff; /* Sesuaikan warna font, misalnya biru seperti tombol lain */
+}
+
+/* Styling untuk popup */
+#pageInputPopup {
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+#pageInputPopup input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#pageInputPopup button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+#pageInputPopup button:hover {
+    background-color: #0056b3;
+}
+/* Styling untuk container dropdown Records per page */
+#recordsPerPageContainer {
+    margin-top: -30px; /* Naikkan elemen ke atas (sesuaikan nilai ini untuk posisi yang diinginkan) */
+    margin-left: -15px; /* Geser ke kiri (sesuaikan nilai ini untuk sejajar dengan tepi tabel) */
+    display: inline-block; /* Pastikan elemen tetap inline dengan elemen lain di panel-heading */
+}
+
+/* Pastikan tabel tetap berada di posisi yang diinginkan */
+.table-responsive {
+    margin-top: 20px; /* Tambahkan margin atas untuk tabel agar tidak terlalu dekat dengan dropdown */
+    overflow: scroll;
+}
+
+/* Styling tambahan untuk panel-body agar layout konsisten */
+.panel-body {
+    padding: 15px; /* Pastikan padding panel-body cukup untuk memberikan ruang */
+}
+/* Styling untuk tombol umum */
+.btn {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14pt;
+}
+
+/* Styling untuk tombol Export PDF (jika menggunakan Bootstrap) */
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+/* Styling untuk tombol Export Excel dengan spesifikasi lebih tinggi */
+#exportExcelBtn.btn-excel {
+    background-color: #ff4040 !important; /* Pink agak ke merahan */
+    color: white !important;
+}
+
+#exportExcelBtn.btn-excel:hover {
+    background-color: #e63939 !important; /* Sedikit lebih gelap saat hover */
+}
