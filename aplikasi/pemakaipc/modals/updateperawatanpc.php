@@ -5,6 +5,7 @@ $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : 
 
 if (isset($_POST['tombol'])) {
     // Ambil data dari form
+    $id = $_POST['id']; // Gunakan id langsung dari form
     $nomor = $_POST['nomor'];
     $user = $_POST['user'];
     $divisi = $_POST['divisi'];
@@ -30,20 +31,10 @@ if (isset($_POST['tombol'])) {
     $dvd = $_POST['dvd'];
     $tgl_perawatan = $_POST['tgl_perawatan'];
 
-    // Pastikan nomor tersedia
-    if (empty($nomor)) {
-        die("Error: Nomor tidak ditemukan.");
+    // Pastikan id tersedia (nomor tidak lagi wajib)
+    if (empty($id)) {
+        die("Error: ID tidak ditemukan.");
     }
-
-    // Ambil `id` berdasarkan `nomor`
-    $query_get_id = "SELECT id FROM pcaktif WHERE nomor = ?";
-    $stmt_get_id = sqlsrv_query($conn, $query_get_id, [$nomor]);
-
-    if ($stmt_get_id === false || !($row = sqlsrv_fetch_array($stmt_get_id, SQLSRV_FETCH_ASSOC))) {
-        die("Error: ID tidak ditemukan untuk nomor $nomor.");
-    }
-
-    $id = $row['id']; // Dapatkan ID dari database
 
     // Query untuk update data
     $query_update = "

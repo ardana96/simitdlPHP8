@@ -22,7 +22,7 @@
         <div class="col-lg-12">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <a href="user.php?menu=inputpcnew">
+                    <a href="user.php?menu=inputpcnew100">
                         <button class="btn btn-primary">Tambah PC</button>
                     </a>
                     <!-- Dropdown akan dibuat di JavaScript -->
