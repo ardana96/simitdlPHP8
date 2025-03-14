@@ -145,6 +145,7 @@ $tgll = date('Y-01-01');
                     case 'updaterpemakaipc': include('aplikasi/pemakaipc/modals/update_pemakaipc.php'); break;
                     // case 'inputpcV2': include('aplikasi/inputpcV2.php'); break;
                     case 'inputpcnew': include('aplikasi/stockopname/actionstop/inputpc.php'); break;
+                    case 'inputpcnew100': include('aplikasi/pemakaipc/actions/inputpc.php'); break;
                     case 'fkerusakanprinter': include('aplikasi/fkerusakanprinter.php'); break;
                     case 'serviceprinter': include('aplikasi/serviceprinter.php'); break;
                     case 'scanner': include('aplikasi/scanner.php'); break;
