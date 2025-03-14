@@ -1,28 +1,43 @@
 <?php
-// Koneksi ke database
-$conn = mysql_connect("localhost", "root", "dlris30g");
-mysql_select_db("sitdl", $conn);
+// Sertakan file konfigurasi database (misalnya config.php)
+include(dirname(dirname(dirname(__FILE__))) . '/config.php');
+
+// Pastikan koneksi tersedia
+if (!$conn) {
+    die("Koneksi database gagal: " . print_r(sqlsrv_errors(), true));
+}
 
 // Ambil perangkat_id dari parameter GET
 if (isset($_GET['perangkat'])) {
-    $perangkat_id = mysql_real_escape_string($_GET['perangkat']);
+    $perangkat_id = $_GET['perangkat']; // Tidak perlu escape manual dengan prepared statements
 
-    $query = "SELECT nama_perangkat FROM tipe_perawatan WHERE id = '$perangkat_id' LIMIT 1";
-    $result = mysql_query($query, $conn);
-    if ($result && mysql_num_rows($result) > 0) {
-        // Ambil hasil sebagai string
-        $row = mysql_fetch_assoc($result);
-        $resultString = $row['nama_perangkat'];
+    // Query untuk mengambil nama_perangkat dengan prepared statement
+    $query = "SELECT TOP 1 nama_perangkat FROM tipe_perawatan WHERE id = ?";
+    $params = [$perangkat_id];
+    $stmt = sqlsrv_prepare($conn, $query, $params);
 
-        // Tampilkan hasil sebagai string (bukan JSON atau array)
-        echo $resultString;
-    } else {
-        echo "Data tidak ditemukan";
+    if ($stmt === false) {
+        die("Persiapan query gagal: " . print_r(sqlsrv_errors(), true));
     }
-    
+
+    if (sqlsrv_execute($stmt)) {
+        // Ambil hasil sebagai array
+        if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            // Tampilkan hasil sebagai string
+            echo $row['nama_perangkat'] ?? 'Data tidak ditemukan';
+        } else {
+            echo "Data tidak ditemukan";
+        }
+    } else {
+        die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
+    }
+
+    // Bebaskan resource statement
+    sqlsrv_free_stmt($stmt);
 } else {
     echo "<p>ID perangkat tidak valid.</p>";
 }
 
-mysql_close($conn);
+// Tutup koneksi
+sqlsrv_close($conn);
 ?>

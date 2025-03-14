@@ -1,150 +1,217 @@
 <?php
 session_start();
-// Koneksi ke database
-$server = "localhost";
-$username = "root";
-$password = "dlris30g";
-$database = "sitdl";
 
-$conn = mysql_connect($server, $username, $password);
-mysql_select_db($database, $conn);
+// Sertakan file konfigurasi database
+include(dirname(dirname(dirname(__FILE__))) . '/config.php');
 
-// Buat query untuk menampilkan data berdasarkan filter
-$query = "SELECT * FROM pcaktif WHERE nomor=0";
+// Pastikan koneksi tersedia
+if (!$conn) {
+    die("Koneksi database gagal: " . print_r(sqlsrv_errors(), true));
+}
+
+// Inisialisasi variabel default
+$tahun = date('Y'); // Default tahun saat ini jika tidak ada input
+$tipe = '';
+$jumlahperawatan = 0;
+
+// Inisialisasi array parameter untuk prepared statement
+$params = [];
+
+// Buat query dasar
+$query = "SELECT * FROM pcaktif WHERE nomor = 0";
 
 if (!empty($_GET['perangkat'])) {
-    $perangkat = mysql_real_escape_string($_GET['perangkat']);
-    $tahun = mysql_real_escape_string($_GET['tahun']);
-    $qry	= mysql_query("SELECT nama_perangkat FROM tipe_perawatan WHERE id = $perangkat");
-    $row	= mysql_fetch_array($qry); 
-    $tipe = strtolower($row[0]);
+    $perangkat = $_GET['perangkat'];
+    $tahun = $_GET['tahun'] ?? date('Y'); // Gunakan tahun saat ini jika tidak ada
+    $bulan = $_GET['bulan'] ?? '';
 
-    // $qry_item = mysql_query("SELECT COUNT(*) as jumlahperawatan FROM tipe_perawatan_item WHERE tipe_perawatan_id = $perangkat");
-    // $row_item	= mysql_fetch_array($qry); 
-    // $jumlahperawatan = $row_item[0];
+    // Query untuk mengambil nama perangkat
+    $qry = "SELECT nama_perangkat FROM tipe_perawatan WHERE id = ?";
+    $stmtQry = sqlsrv_prepare($conn, $qry, [$perangkat]);
+    if ($stmtQry === false) {
+        die("Persiapan query gagal: " . print_r(sqlsrv_errors(), true));
+    }
+    if (!sqlsrv_execute($stmtQry)) {
+        die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
+    }
+    $row = sqlsrv_fetch_array($stmtQry, SQLSRV_FETCH_ASSOC);
+    $tipe = strtolower($row['nama_perangkat'] ?? '');
+    sqlsrv_free_stmt($stmtQry);
 
-    $qry_item = mysql_query("SELECT id as jumlahperawatan FROM tipe_perawatan_item WHERE tipe_perawatan_id = $perangkat");
-    $jumlahperawatan = mysql_num_rows($qry_item);
+    // Query untuk menghitung jumlah perawatan
+    $qryItem = "SELECT id as jumlahperawatan FROM tipe_perawatan_item WHERE tipe_perawatan_id = ?";
+    $stmtItem = sqlsrv_prepare($conn, $qryItem, [$perangkat]);
+    if ($stmtItem === false) {
+        die("Persiapan query gagal: " . print_r(sqlsrv_errors(), true));
+    }
+    if (!sqlsrv_execute($stmtItem)) {
+        die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
+    }
+    $jumlahperawatan = sqlsrv_num_rows($stmtItem);
+    sqlsrv_free_stmt($stmtItem);
 
-
-    if(strtolower($tipe) == 'pc dan laptop')
-    {
+    // Inisialisasi query utama dengan WHERE 1=1 untuk mempermudah penambahan filter
+    if (strtolower($tipe) == 'pc dan laptop') {
         $query = "SELECT 
                     idpc, 
                     user, 
                     lokasi, 
-                    'PC' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND  YEAR(tanggal_perawatan) = $tahun ) AS hitung,
-                    (SELECT tanggal_perawatan FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND  YEAR(tanggal_perawatan) = $tahun LIMIT 1) AS tanggal,
-                    (SELECT ket FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND  tahun = $tahun) AS keterangan,
-                    (SELECT treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND  tahun = $tahun) AS treated_by
-                    FROM 
-                    pcaktif WHERE 1=1";
- 
-
-    }else if(strtolower($tipe)  == 'printer'){
-        //$query = "SELECT id_perangkat As idpc, user, lokasi as lokasi FROM printer where  1=1  ";
-
+                    model AS perangkat,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ?) AS keterangan,
+                    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ?) AS treated_by
+                  FROM pcaktif WHERE 1=1";
+        $params = [$tahun, $tahun, $tahun, $tahun];
+    } else if (strtolower($tipe) == 'printer') {
         $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, 'printer' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND  YEAR(tanggal_perawatan) = $tahun ) AS hitung,
-                    (SELECT tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND  YEAR(tanggal_perawatan) = $tahun LIMIT 1) AS tanggal,
-                    (SELECT ket FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat  AND  tahun = $tahun) AS keterangan,
-                    (SELECT treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND  tahun = $tahun) AS treated_by
-                    FROM 
-                    printer WHERE 1=1";
-    }
-    else if(strtolower($tipe)  == 'scaner'){
-        //$query = "SELECT id_perangkat As idpc, user, lokasi as lokasi FROM scaner where  1=1  ";
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS keterangan,
+                    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS treated_by
+                  FROM printer WHERE 1=1";
+        $params = [$tahun, $tahun, $tahun, $tahun];
+    } else if (strtolower($tipe) == 'scaner') {
         $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, 'scaner' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND  YEAR(tanggal_perawatan) = $tahun ) AS hitung,
-                    (SELECT tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND  YEAR(tanggal_perawatan) = $tahun LIMIT 1) AS tanggal,
-                    (SELECT ket FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND  tahun = $tahun) AS keterangan,
-                    (SELECT treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND  tahun = $tahun) AS treated_by
-                    FROM 
-                    scaner WHERE 1=1";
-    }
-    
-    else {
-       
-        //$query = "SELECT id_perangkat As idpc, user, lokasi as lokasi FROM peripheral where tipe = '$tipe' and 1=1  ";
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS keterangan,
+                    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS treated_by
+                  FROM scaner WHERE 1=1";
+        $params = [$tahun, $tahun, $tahun, $tahun];
+    } else if (strtolower($tipe) == 'server') {
         $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND  YEAR(tanggal_perawatan) = $tahun ) AS hitung,
-                    (SELECT tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND  YEAR(tanggal_perawatan) = $tahun LIMIT 1) AS tanggal,
-                    (SELECT ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND  tahun = $tahun) AS keterangan,
-                    (SELECT treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND  tahun = $tahun) AS treated_by
-                    FROM 
-                    peripheral WHERE tipe = '$tipe' and 1=1 ";
-        //$query = "SELECT * FROM pcaktif WHERE 1=1";
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ? AND bulan = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
+                    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS keterangan,
+                    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS treated_by,
+                    (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS approve_by
+                  FROM peripheral WHERE tipe = ? AND 1=1";
+        $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
+    } else if (strtolower($tipe) == 'ups') {
+        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ? AND bulan = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
+                    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS keterangan,
+                    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS treated_by,
+                    (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS approve_by
+                  FROM peripheral WHERE tipe = ? AND 1=1";
+        $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
+    } else {
+        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS keterangan,
+                    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS treated_by
+                  FROM peripheral WHERE tipe = ? AND 1=1";
+        $params = [$tahun, $tahun, $tahun, $tahun, $tipe];
     }
-    // var_dump($perangkat);
-    // exit;
-    //$query = "SELECT * FROM pcaktif WHERE 1=1";
 }
 
+// Filter tambahan
 if (!empty($_GET['bulan'])) {
-    $bulan = mysql_real_escape_string($_GET['bulan']);
-    $query .= " AND bulan LIKE '%$bulan%'";
+    $bulan = $_GET['bulan'];
+    if ((strtolower($tipe) == 'ups' || strtolower($tipe) == 'server') && !empty($_GET['tahun'])) {
+        $tahun = $_GET['tahun'];
+        $query .= " AND bulan = '00'";
+    } else {
+        $query .= " AND bulan LIKE ?";
+        $params[] = "%$bulan%";
+    }
 }
 
 if (!empty($_GET['namadivisi'])) {
-    $namadivisi = mysql_real_escape_string($_GET['namadivisi']);
-    if(strtolower($tipe)  == 'printer' || strtolower($tipe)  == 'scaner'){
-        $query .= " AND status LIKE '%$namadivisi%'";
-    }else{
-        $query .= " AND divisi LIKE '%$namadivisi%'";
+    $namadivisi = $_GET['namadivisi'];
+    if (strtolower($tipe) == 'printer' || strtolower($tipe) == 'scaner') {
+        $query .= " AND status LIKE ?";
+        $params[] = "%$namadivisi%";
+    } else {
+        $query .= " AND divisi LIKE ?";
+        $params[] = "%$namadivisi%";
     }
-    //$namadivisi = mysql_real_escape_string($_GET['namadivisi']);
-    
 }
-
 
 if (!empty($_GET['perangkat'])) {
-$query .= " ORDER BY tanggal DESC";
+    $query .= " ORDER BY tanggal DESC";
 }
 
-// if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
-//     $start_date = mysql_real_escape_string($_GET['start_date']);
-//     $end_date = mysql_real_escape_string($_GET['end_date']);
-//     $query .= " AND order_date BETWEEN '$start_date' AND '$end_date'";
-// }
+// Debugging: Tampilkan query untuk memeriksa sintaks (opsional, hapus setelah debugging)
+// echo "Query: " . $query . "<br>";
+// echo "Params: " . print_r($params, true) . "<br>";
 
-$result = mysql_query($query, $conn);
+// Persiapkan dan eksekusi query
+$stmt = sqlsrv_prepare($conn, $query, $params);
+if ($stmt === false) {
+    die("Persiapan query gagal: " . print_r(sqlsrv_errors(), true));
+}
+if (!sqlsrv_execute($stmt)) {
+    die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
+}
+
+// Hitung jumlah baris
+$rowCount = 0;
+$result = [];
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $result[] = $row;
+    $rowCount++;
+}
 
 $output = "";
-if (mysql_num_rows($result) > 0) {
+if ($rowCount > 0) {
     $sudah = 0;
-    $sedang =0;
+    $sedang = 0;
     $belum = 0;
-    while ($row = mysql_fetch_assoc($result)) {
-       
-        if ($row['hitung'] ==  $jumlahperawatan ) {
-            $sudah++;
-        } else if ($row['hitung'] < $jumlahperawatan && $row['hitung'] > 0  ){
-            $sedang++;
+    foreach ($result as $row) {
+        if (strtolower($row['perangkat']) == 'switch/router') {
+            if ($row['hitung'] >= 2) {
+                $sudah++;
+            } else if ($row['hitung'] < 2 && $row['hitung'] > 0) {
+                $sedang++;
+            } else {
+                $belum++;
+            }
+        } else if ($perangkat == 'ups') {
+            if ($row['hitung'] >= 1) {
+                $sudah++;
+            } else {
+                $belum++;
+            }
+        } else if ($perangkat == 'server') {
+            if ($row['hitung'] >= 1) {
+                $sudah++;
+            } else {
+                $belum++;
+            }
         } else {
-            $belum++;
-        } 
-        
-    }
-    $total = mysql_num_rows($result);
-    $progress = $sudah/$total * 100;
-        $output .= "<tr>";
-        $output .= "<td>" . $sudah . "</td>";
-        $output .= "<td>" . $sedang . "</td>";
-        $output .= "<td>" . $belum . "</td>";
-        $output .= "<td>" . $total  . "</td>";
-        if($progress < 50){
-            $output .= "<td style='background-color:#FE6868;'>" . round($progress, 2). " % </td>";
-        }else if($progress >= 50){
-            $output .= "<td style='background-color:#59F2ED;'>" . round($progress, 2). " % </td>";
+            if ($row['hitung'] == $jumlahperawatan) {
+                $sudah++;
+            } else if ($row['hitung'] < $jumlahperawatan && $row['hitung'] > 0) {
+                $sedang++;
+            } else {
+                $belum++;
+            }
         }
-        $output .= "</tr>";
-
+    }
+    $total = $rowCount;
+    $progress = $total > 0 ? ($sudah / $total * 100) : 0; // Hindari pembagian dengan nol
+    $output .= "<tr>";
+    $output .= "<td>" . $sudah . "</td>";
+    $output .= "<td>" . $sedang . "</td>";
+    $output .= "<td>" . $belum . "</td>";
+    $output .= "<td>" . $total . "</td>";
+    if ($progress < 50) {
+        $output .= "<td style='background-color:#FE6868;'>" . round($progress, 2) . " % </td>";
+    } else if ($progress >= 50) {
+        $output .= "<td style='background-color:#59F2ED;'>" . round($progress, 2) . " % </td>";
+    }
+    $output .= "</tr>";
 } else {
-    $output .= "<tr><td colspan='3'>Tidak ada data ditemukan.</td></tr>";
+    $output .= "<tr><td colspan='5'>Tidak ada data ditemukan.</td></tr>";
 }
 
 echo $output;
 
-mysql_close($conn);
+// Bersihkan resource dan tutup koneksi
+sqlsrv_free_stmt($stmt);
+sqlsrv_close($conn);
 ?>
