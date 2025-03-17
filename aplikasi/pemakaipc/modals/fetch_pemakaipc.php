@@ -28,7 +28,7 @@ $offset = ($page - 1) * $limit;
 $sql = "SELECT * FROM (
     SELECT ROW_NUMBER() OVER (ORDER BY id ASC) AS RowNum, 
            id, nomor, ippc, idpc, [user], namapc, bagian, subbagian, lokasi, prosesor, mobo, ram, harddisk, bulan, tgl_perawatan, tgl_update
-    FROM pcaktif
+    FROM pcaktif Where isDeleted = 0
 ) AS RowConstrainedResult
 WHERE RowNum > ? AND RowNum <= ?";
 $params = [$offset, $offset + $limit];

@@ -294,7 +294,9 @@
                 },
                 success: function(response) {
                     $('#modalCheckboxes').html(response);
-                    $('#editModal').modal('show');
+                    $('#modalPerangkatValue').text(perangkatValue); // Menampilkan perangkat di modal
+                    $('#editModal').modal('show'); // Tampilkan modal
+                    console.log("test");
                 },
                 error: function() {
                     alert('Gagal memuat data.');

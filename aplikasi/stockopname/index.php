@@ -27,6 +27,9 @@
                     </a>
                     <!-- Dropdown akan dibuat di JavaScript -->
                     <button id="toggleFilter" class="btn btn-warning" style="margin-left: 10px;">Filter</button>
+                    <a href="user.php?menu=scanopname">
+                        <button class="btn btn-primary">Scan</button>
+                    </a>
                 </div>
                 <div class="panel-body">
                     <div id="filterContainer" style="display: none; margin-top: 20px;">

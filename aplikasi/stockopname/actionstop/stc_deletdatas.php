@@ -17,8 +17,9 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
     $nomor = $_POST['nomor'];
 
     // Query untuk menghapus data berdasarkan id DAN nomor dari tabel pcaktif
-    $sql = "DELETE FROM pcaktif WHERE id = ? AND nomor = ?";
-    $params = array($id, $nomor);
+    $sql = "UPDATE pcaktif SET 
+                isDeleted = ? WHERE id = ? AND nomor = ?";
+    $params = array(true, $id, $nomor);
     $query = sqlsrv_query($conn, $sql, $params);
 
     // Periksa apakah query berhasil

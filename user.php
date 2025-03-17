@@ -142,6 +142,7 @@ $tgll = date('Y-01-01');
                     case 'inputpc': include('aplikasi/inputpc.php'); break;
                     case 'stockop': include('aplikasi/stockopname/index.php'); break;
                     case 'updatestockop': include('aplikasi/stockopname/update_stockop.php'); break;
+                    case 'updatestockopscan': include('aplikasi/stockopname/update_stockop_scan.php'); break;
                     case 'updaterpemakaipc': include('aplikasi/pemakaipc/modals/update_pemakaipc.php'); break;
                     // case 'inputpcV2': include('aplikasi/inputpcV2.php'); break;
                     case 'inputpcnew': include('aplikasi/stockopname/actionstop/inputpc.php'); break;
@@ -160,6 +161,7 @@ $tgll = date('Y-01-01');
                     case 'perawatan': include('aplikasi/perawatan/perawatan.php'); break;
                     case 'perawatanapp': include('aplikasi/perawatan_app/index.php'); break;
                     case 'users': include('aplikasi/user/user.php'); break;
+                    case 'scanopname': include('aplikasi/stockopname/scanqr/index.php'); break;
                 }
             }
             ?>
