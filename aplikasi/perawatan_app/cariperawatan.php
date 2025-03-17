@@ -11,7 +11,7 @@ if (!$conn) {
 
 // Inisialisasi variabel default
 $tahun = date('Y'); // Default tahun saat ini jika tidak ada input
-$tipe = ''; // Default tipe jika tidak ada input
+$tipe = '';
 $jumlahperawatan = 0;
 
 // Inisialisasi array parameter untuk prepared statement
@@ -48,7 +48,14 @@ if (!empty($_GET['perangkat'])) {
         die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
     }
     $jumlahperawatan = sqlsrv_num_rows($stmtItem);
+    // Jika tidak ada item perawatan, set default minimal 1 perawatan
+    if ($jumlahperawatan == 0) {
+        $jumlahperawatan = 1; // Default minimal 1 perawatan
+    }
     sqlsrv_free_stmt($stmtItem);
+
+    // Debugging: Tampilkan nilai $jumlahperawatan
+    // echo "Jumlah Perawatan Diharapkan: $jumlahperawatan<br>";
 
     // Inisialisasi query utama dengan WHERE 1=1 untuk mempermudah penambahan filter
     if (strtolower($tipe) == 'pc dan laptop') {
@@ -162,21 +169,46 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
 $output = "";
 if ($rowCount > 0) {
+    $sudah = 0;
+    $sedang = 0;
+    $belum = 0;
     foreach ($result as $row) {
         if (strtolower($row['perangkat']) == 'switch/router') {
             if ($row['hitung'] >= 2) {
+                $sudah++;
                 $output .= "<tr style='background-color:#d4edda;'>";
             } else if ($row['hitung'] < 2 && $row['hitung'] > 0) {
+                $sedang++;
                 $output .= "<tr style='background-color:#FFFF00;'>";
             } else {
+                $belum++;
+                $output .= "<tr>";
+            }
+        } else if (strtolower($tipe) == 'ups') {
+            if ($row['hitung'] >= 1) {
+                $sudah++;
+                $output .= "<tr style='background-color:#d4edda;'>"; // Hijau untuk sudah
+            } else {
+                $belum++;
+                $output .= "<tr>";
+            }
+        } else if (strtolower($tipe) == 'server') {
+            if ($row['hitung'] >= 1) {
+                $sudah++;
+                $output .= "<tr style='background-color:#d4edda;'>"; // Hijau untuk sudah
+            } else {
+                $belum++;
                 $output .= "<tr>";
             }
         } else {
             if ($row['hitung'] == $jumlahperawatan) {
+                $sudah++;
                 $output .= "<tr style='background-color:#d4edda;'>";
             } else if ($row['hitung'] < $jumlahperawatan && $row['hitung'] > 0) {
+                $sedang++;
                 $output .= "<tr style='background-color:#FFFF00;'>";
             } else {
+                $belum++;
                 $output .= "<tr>";
             }
         }
@@ -184,15 +216,28 @@ if ($rowCount > 0) {
                     <button type='button' class='btn btn-warning' onclick='showEdit(" . json_encode($row) . ")'>Rawat</button>
                     </td>";
         $output .= "<td>" . htmlspecialchars($row['idpc'], ENT_QUOTES, 'UTF-8') . "</td>";
-        $output .= "<td>" . htmlspecialchars($row['user'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>"; // Tambahkan ?? untuk nilai default
+        $output .= "<td>" . htmlspecialchars($row['user'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
         $output .= "<td>" . htmlspecialchars($row['lokasi'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
         $output .= "<td>" . htmlspecialchars($row['treated_by'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
         $output .= "<td>" . htmlspecialchars($row['keterangan'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
         $output .= "<td>" . strtoupper(htmlspecialchars($row['perangkat'] ?? '', ENT_QUOTES, 'UTF-8')) . "</td>";
         $output .= "</tr>";
     }
+    $total = $rowCount;
+    $progress = $total > 0 ? ($sudah / $total * 100) : 0; // Hindari pembagian dengan nol
+    // $output .= "<tr>";
+    // $output .= "<td>" . $sudah . "</td>";
+    // $output .= "<td>" . $sedang . "</td>";
+    // $output .= "<td>" . $belum . "</td>";
+    // $output .= "<td>" . $total . "</td>";
+    // if ($progress < 50) {
+    //     $output .= "<td style='background-color:#FE6868;'>" . round($progress, 2) . " % </td>";
+    // } else if ($progress >= 50) {
+    //     $output .= "<td style='background-color:#59F2ED;'>" . round($progress, 2) . " % </td>";
+    // }
+    // $output .= "</tr>";
 } else {
-    $output .= "<tr><td colspan='7'>Tidak ada data ditemukan.</td></tr>";
+    $output .= "<tr><td colspan='5'>Tidak ada data ditemukan.</td></tr>";
 }
 
 echo $output;

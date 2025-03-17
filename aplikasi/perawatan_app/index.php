@@ -49,7 +49,11 @@
                                     <b>Tahun</b>        
                                     <select class="form-control" name="tahun" size="1" id="tahun">
                                         <?php
-                                        for ($i = date('Y'); $i >= 2022; $i--) {
+                                        // for ($i = date('Y'); $i >= 2022; $i--) {
+                                        //     $year = ($i < 10) ? "0$i" : $i;
+                                        //     echo "<option value=\"$year\">$year</option>";
+                                        // }
+                                        for ($i = 2030; $i >= 2022; $i--) {
                                             $year = ($i < 10) ? "0$i" : $i;
                                             echo "<option value=\"$year\">$year</option>";
                                         }
