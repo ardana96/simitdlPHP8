@@ -184,6 +184,22 @@
                             <label for="lokasi">Lokasi</label>
                             <input type="text" class="form-control" name="lokasi" id="lokasi" disabled>
                         </div>
+                        <div class="form-group">
+                            <label for="bulan">Bulan</label>
+                            <select class="form-control" name="bulan" id="bulanModul" required disabled>
+                                <option value="">Pilih Bulan</option>
+                                <?php
+                                $bulanArr = array(
+                                    "01" => "Januari", "02" => "Februari", "03" => "Maret", "04" => "April",
+                                    "05" => "Mei", "06" => "Juni", "07" => "Juli", "08" => "Agustus",
+                                    "09" => "September", "10" => "Oktober", "11" => "November", "12" => "Desember"
+                                );
+                                foreach ($bulanArr as $id => $nama) {
+                                    echo "<option value='$id'>$nama</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
                         <hr>
                         <div class="form-group">
                             <label for="editOrderDate">Jenis Perawatan</label><br>
@@ -307,40 +323,46 @@
         }
 
         function simpanPerawatan() {
-            const selectedItems = Array.from(document.querySelectorAll("input[name='selected_items[]']:checked")).map(cb => cb.value);
-            const unselectedItems = Array.from(document.querySelectorAll("input[name='selected_items[]']:not(:checked)")).map(cb => cb.value);
-            const idpc = document.getElementById("idpc").value;
-            const user = document.getElementById("user").value;
-            const lokasi = document.getElementById("lokasi").value;
-            const keterangan = document.getElementById("keterangan").value;
-            const tipe_perawatan_id = document.getElementById("perangkatId").value;
-            const approve_by = document.getElementById("approve_by").value;
-            const tahun = document.getElementById("tahunModal").value;
+    const selectedItems = Array.from(document.querySelectorAll("input[name='selected_items[]']:checked")).map(cb => cb.value);
+    const unselectedItems = Array.from(document.querySelectorAll("input[name='selected_items[]']:not(:checked)")).map(cb => cb.value);
+    const idpc = document.getElementById("idpc").value;
+    const user = document.getElementById("user").value;
+    const lokasi = document.getElementById("lokasi").value;
+    const keterangan = document.getElementById("keterangan").value;
+    const tipe_perawatan_id = document.getElementById("perangkatId").value;
+    const approve_by = document.getElementById("approve_by").value;
+    const tahun = document.getElementById("tahun").value;
+    const bulan = document.getElementById("bulanModul").value;
 
-            $.ajax({
-                url: 'aplikasi/perawatan_app/simpan_perawatan.php',
-                type: 'POST',
-                data: {
-                    idpc: idpc,
-                    user: user,
-                    lokasi: lokasi,
-                    tipe_perawatan_id: tipe_perawatan_id,
-                    tahun: tahun,
-                    keterangan: keterangan,
-                    selected_items: selectedItems,
-                    unselected_items: unselectedItems,
-                    approve_by: approve_by
-                },
-                success: function(response) {
-                    console.log(response);
-                    $('#editModal').modal('hide');
-                    loadData();
-                },
-                error: function() {
-                    alert('Gagal menyimpan data.');
-                }
-            });
+    // Debugging: Log selectedItems sebelum dikirim
+    console.log("Selected Items:", selectedItems);
+    console.log("Unselected Items:", unselectedItems);
+
+    $.ajax({
+        url: 'aplikasi/perawatan_app/simpan_perawatan.php',
+        type: 'POST',
+        data: {
+            idpc: idpc,
+            user: user,
+            lokasi: lokasi,
+            tipe_perawatan_id: tipe_perawatan_id,
+            tahun: tahun,
+            bulan: bulan, // Tambahkan parameter bulan
+            keterangan: keterangan,
+            selected_items: selectedItems,
+            unselected_items: unselectedItems,
+            approve_by: approve_by
+        },
+        success: function(response) {
+            console.log(response);
+            $('#editModal').modal('hide');
+            loadData();
+        },
+        error: function() {
+            alert('Gagal menyimpan data.');
         }
+    });
+}
 
         function refresh() {
             location.reload();
@@ -418,5 +440,20 @@
                 window.open(mergeUrl, '_blank');
             });
         }
+
+        
+        $(document).ready(function() {
+    // Set nilai default bulan di modal berdasarkan bulan yang dipilih di filter utama
+    $("select[name='bulan']").on("change", function() {
+        let selectedBulan = $(this).val(); // Ambil nilai bulan dari filter utama
+        $("#bulanModul").val(selectedBulan); // Atur nilai dropdown di modal
+    });
+
+    // Saat modal dibuka, pastikan dropdown bulan tetap sesuai dengan filter utama
+    $("#editModal").on("show.bs.modal", function() {
+        let selectedBulan = $("select[name='bulan']").val();
+        $("#bulanModul").val(selectedBulan);
+    });
+});
     </script>
 </div>

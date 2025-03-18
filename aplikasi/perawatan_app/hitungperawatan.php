@@ -58,7 +58,7 @@ if (!empty($_GET['perangkat'])) {
     if (strtolower($tipe) == 'pc dan laptop') {
         $query = "SELECT 
                     idpc, 
-                    user, 
+                    [user], 
                     lokasi, 
                     model AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS hitung,
@@ -69,7 +69,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM pcaktif WHERE 1=1";
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'printer') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, 'printer' AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'printer' AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS keterangan,
@@ -78,7 +78,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM printer WHERE 1=1";
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'scaner') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, 'scaner' AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'scaner' AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS keterangan,
@@ -87,7 +87,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM scaner WHERE 1=1";
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'ups') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ? AND bulan = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS keterangan,
@@ -96,7 +96,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM peripheral WHERE tipe = ? AND 1=1";
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else if (strtolower($tipe) == 'server') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ? AND bulan = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS keterangan,
@@ -105,7 +105,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM peripheral WHERE tipe = ? AND 1=1";
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ? ORDER BY id DESC) AS keterangan,
@@ -178,15 +178,21 @@ if ($rowCount > 0) {
             } else {
                 $belum++;
             }
-        } else if (strtolower($tipe) == 'ups') { // Sesuaikan dengan $tipe, bukan $perangkat
-            if ($row['hitung'] >= 1) {
-                $sudah++;
+        } else if (strtolower($tipe) == 'ups') {
+            // Target perawatan untuk UPS adalah 4
+            if ($row['hitung'] >= 4) {
+                $sudah++; // Hijau: Target tercapai
+            } else if ($row['hitung'] >= 1 && $row['hitung'] < 4) {
+                $sedang++; // Kuning: Belum selesai, tapi ada perawatan
             } else {
-                $belum++;
+                $belum++; // Default: Belum ada perawatan
             }
-        } else if (strtolower($tipe) == 'server') { // Sesuaikan dengan $tipe, bukan $perangkat
-            if ($row['hitung'] >= 1) {
+        } else if (strtolower($tipe) == 'server') {
+            // Sesuaikan logika untuk server jika diperlukan, misal target 4 juga
+            if ($row['hitung'] >= 4) {
                 $sudah++;
+            } else if ($row['hitung'] >= 1 && $row['hitung'] < 4) {
+                $sedang++;
             } else {
                 $belum++;
             }

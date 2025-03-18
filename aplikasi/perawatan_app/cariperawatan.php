@@ -61,7 +61,7 @@ if (!empty($_GET['perangkat'])) {
     if (strtolower($tipe) == 'pc dan laptop') {
         $query = "SELECT 
                     idpc, 
-                    user, 
+                    [user], 
                     lokasi, 
                     model AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS hitung,
@@ -72,7 +72,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM pcaktif WHERE 1=1";
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'printer') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, 'printer' AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'printer' AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS keterangan,
@@ -81,7 +81,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM printer WHERE 1=1";
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'scaner') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, 'scaner' AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'scaner' AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS keterangan,
@@ -90,7 +90,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM scaner WHERE 1=1";
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'ups') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ? AND bulan = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS keterangan,
@@ -99,7 +99,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM peripheral WHERE tipe = ? AND 1=1";
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else if (strtolower($tipe) == 'server') {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ? AND bulan = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS keterangan,
@@ -108,7 +108,7 @@ if (!empty($_GET['perangkat'])) {
                   FROM peripheral WHERE tipe = ? AND 1=1";
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else {
-        $query = "SELECT id_perangkat AS idpc, user, lokasi AS lokasi, tipe AS perangkat,
+        $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
                     (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ? ORDER BY id DESC) AS keterangan,
@@ -173,45 +173,18 @@ if ($rowCount > 0) {
     $sedang = 0;
     $belum = 0;
     foreach ($result as $row) {
-        if (strtolower($row['perangkat']) == 'switch/router') {
-            if ($row['hitung'] >= 2) {
-                $sudah++;
-                $output .= "<tr style='background-color:#d4edda;'>";
-            } else if ($row['hitung'] < 2 && $row['hitung'] > 0) {
-                $sedang++;
-                $output .= "<tr style='background-color:#FFFF00;'>";
-            } else {
-                $belum++;
-                $output .= "<tr>";
-            }
-        } else if (strtolower($tipe) == 'ups') {
-            if ($row['hitung'] >= 1) {
-                $sudah++;
-                $output .= "<tr style='background-color:#d4edda;'>"; // Hijau untuk sudah
-            } else {
-                $belum++;
-                $output .= "<tr>";
-            }
-        } else if (strtolower($tipe) == 'server') {
-            if ($row['hitung'] >= 1) {
-                $sudah++;
-                $output .= "<tr style='background-color:#d4edda;'>"; // Hijau untuk sudah
-            } else {
-                $belum++;
-                $output .= "<tr>";
-            }
+        // Logika baru berdasarkan hitung (1 atau 2 = kuning, 4 = hijau)
+        if ($row['hitung'] == 4) {
+            $sudah++;
+            $output .= "<tr style='background-color:#d4edda;'>"; // Hijau untuk hitung = 4
+        } else if ($row['hitung'] >= 1 && $row['hitung'] <= 2) {
+            $sedang++;
+            $output .= "<tr style='background-color:#FFFF00;'>"; // Kuning untuk hitung 1 atau 2
         } else {
-            if ($row['hitung'] == $jumlahperawatan) {
-                $sudah++;
-                $output .= "<tr style='background-color:#d4edda;'>";
-            } else if ($row['hitung'] < $jumlahperawatan && $row['hitung'] > 0) {
-                $sedang++;
-                $output .= "<tr style='background-color:#FFFF00;'>";
-            } else {
-                $belum++;
-                $output .= "<tr>";
-            }
+            $belum++;
+            $output .= "<tr>"; // Default untuk hitung < 1 atau > 2
         }
+
         $output .= "<td>
                     <button type='button' class='btn btn-warning' onclick='showEdit(" . json_encode($row) . ")'>Rawat</button>
                     </td>";
@@ -221,25 +194,15 @@ if ($rowCount > 0) {
         $output .= "<td>" . htmlspecialchars($row['treated_by'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
         $output .= "<td>" . htmlspecialchars($row['keterangan'] ?? '', ENT_QUOTES, 'UTF-8') . "</td>";
         $output .= "<td>" . strtoupper(htmlspecialchars($row['perangkat'] ?? '', ENT_QUOTES, 'UTF-8')) . "</td>";
+        $output .= "<td>" . $jumlahperawatan . "</td>";
+        $output .= "<td>" . $row['hitung'] . "</td>";
         $output .= "</tr>";
     }
     $total = $rowCount;
     $progress = $total > 0 ? ($sudah / $total * 100) : 0; // Hindari pembagian dengan nol
-    // $output .= "<tr>";
-    // $output .= "<td>" . $sudah . "</td>";
-    // $output .= "<td>" . $sedang . "</td>";
-    // $output .= "<td>" . $belum . "</td>";
-    // $output .= "<td>" . $total . "</td>";
-    // if ($progress < 50) {
-    //     $output .= "<td style='background-color:#FE6868;'>" . round($progress, 2) . " % </td>";
-    // } else if ($progress >= 50) {
-    //     $output .= "<td style='background-color:#59F2ED;'>" . round($progress, 2) . " % </td>";
-    // }
-    // $output .= "</tr>";
-} else {
+}else {
     $output .= "<tr><td colspan='5'>Tidak ada data ditemukan.</td></tr>";
 }
-
 echo $output;
 
 // Bersihkan resource dan tutup koneksi
