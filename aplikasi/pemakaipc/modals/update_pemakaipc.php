@@ -69,6 +69,7 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
         $cassing = $result['cassing'];
         $dvd = $result['dvd'];
         $seri = $result['seri'];
+        $keterangan = $result['keterangan'];
 
         $sql_bulan = "SELECT bulan FROM bulan WHERE id_bulan = ?";
         $params_bulan = [$bulan];

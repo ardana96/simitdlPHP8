@@ -27,7 +27,7 @@ $page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
 $recordsPerPage = isset($_POST['recordsPerPage']) ? (int)$_POST['recordsPerPage'] : 10;
 
 // Query dasar
-$query = "SELECT * FROM [dbo].[pcaktif] WHERE 1=1";
+$query = "SELECT * FROM [dbo].[pcaktif] WHERE isDeleted = 0 and 1=1";
 
 // Tambahkan kondisi filter jika ada nilai
 $conditions = [];

@@ -2,7 +2,7 @@
 session_start();
 include('../../../config.php');
 $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
-
+$session_user=$_SESSION['user'];
 error_log("Session sebelum update: " . print_r($_SESSION, true));
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -33,6 +33,155 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $dvd = $_POST['dvd'];
     $seri = $_POST['seri'];
     $bulan = $_POST['bulan'];
+    $keterangan = $_POST['keterangan'];
+
+    //insert ke history
+    $sqlHis = "SELECT * FROM pcaktif WHERE id = ? AND nomor = ?";
+    $paramsHis = [$id, $nomor];
+    $stmtHis = sqlsrv_query($conn, $sqlHis, $paramsHis);
+
+    // if ($stmtHis === false) {
+    //     die("Query gagal: " . print_r(sqlsrv_errors(), true));
+    // }
+
+    if ($result = sqlsrv_fetch_array($stmtHis, SQLSRV_FETCH_ASSOC)) {
+        $nomorHis = $result['nomor'];
+        $userHis = $result['user'];
+        $divisiHis = $result['divisi'];
+        $bagianHis = $result['bagian'];
+        $subbagianHis = $result['subbagian'];
+        $lokasiHis = $result['lokasi'];
+        $idpcHis = $result['idpc'];
+        $ippcHis = $result['ippc'];
+        $osHis = $result['os'];
+        $prosesorHis = $result['prosesor'];
+        $moboHis = $result['mobo'];
+        $monitorHis = $result['monitor'];
+        $ramHis = $result['ram'];
+        $harddiskHis = $result['harddisk'];
+        $jumlahHis = $result['jumlah'];
+        $tgl_updateHis = $result['tgl_update'];
+        $bulanHis = $result['bulan'];
+        $tgl_masukHis = $result['tgl_masuk'];
+        $ram1His = $result['ram1'];
+        $ram2His= $result['ram2'];
+        $hd1His = $result['hd1'];
+        $hd2His = $result['hd2'];
+
+        
+        $modelHis = $result['model'];
+        $namapcHis = $result['namapc'];
+        $powersuplyHis = $result['powersuply'];
+        //$powersuplyHis = 'a';
+        $cassingHis = $result['cassing'];
+        //$cassingHis = 'a';
+        $dvdHis = $result['dvd'];
+        //$dvdHis = 'a';
+        $seriHis = $result['seri'];
+        $userHis = $result['user'];
+
+        $sql_bulan = "SELECT bulan FROM bulan WHERE id_bulan = ?";
+        $params_bulan = [$bulan];
+        $stmt_bulan = sqlsrv_query($conn, $sql_bulan, $params_bulan);
+        $namabulanHis = ($dataa = sqlsrv_fetch_array($stmt_bulan, SQLSRV_FETCH_ASSOC)) ? $dataa['bulan'] : '';
+        //$keterangan = $result['keterangan'];
+        
+        $tglupdateHis = ($tgl_update instanceof DateTime) ? $tgl_update->format('Y-m-d') : substr($tgl_update, 0, 10);
+        //$tglupdateHis = date('Y-m-d');
+        $modifiedDate = date('Y-m-d');
+        $tgl_perawatan = $result['tgl_perwatan'];
+        $updateFrom = "TRANSAKSI";
+
+        $queryInsertHis = "INSERT INTO HistoryPcaktif (
+            nomor,
+            [user],
+            divisi, 
+            bagian, 
+            subbagian, 
+            lokasi,
+            idpc, 
+            namapc, 
+            ippc, 
+            os, 
+            prosesor, 
+            mobo, 
+            monitor,
+            ram, 
+            harddisk, 
+            jumlah,
+            tgl_update, 
+            bulan,
+            tgl_perawatan,
+            ram1, 
+            ram2, 
+            hd1, 
+            hd2, 
+            powersuply,
+            cassing, 
+            tgl_masuk,
+            dvd, 
+            model, 
+            seri, 
+            modifiedBy,
+            modifiedDate,
+            keterangan,
+            updateFrom
+            ) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+       
+        $paramInsertHis =  [
+            $nomorHis,
+            $userHis,  
+            $divisiHis, 
+            $bagianHis,
+            $subbagianHis, 
+            $lokasiHis, 
+            $idpcHis,  
+            $namapcHis, 
+            $ippcHis,
+            $osHis, 
+            $prosesorHis,
+            $moboHis,
+            $monitorHis,
+            $ramHis, 
+            $harddiskHis, 
+            $jumlahHis,
+            $tglupdateHis,
+            $namabulanHis,
+            $tgl_perawatan,
+            $ram1His,
+            $ram2His, 
+            $hd1His, 
+            $hd2His, 
+            $powersuplyHis,
+            $cassingHis,
+            $tgl_masukHis,
+            $dvdHis,
+            $modelHis,
+            $seriHis,
+            $session_user,
+            $modifiedDate,
+            $keterangan,
+            $updateFrom
+        ];
+        $stmtInsertHis = sqlsrv_query($conn, $queryInsertHis, $paramInsertHis);
+
+        
+
+       
+        if (!$stmtInsertHis) {
+            echo implode(", ", $paramInsertHis);
+            //die("Error inserting item: " . print_r(sqlsrv_errors(), true));
+            error_log("❌ INSERT gagal, tetapi lanjut ke UPDATE.");
+        }else {
+            error_log("✅ INSERT INTO HistoryPcaktif berhasil!");
+        }
+        sqlsrv_free_stmt($stmtInsertHis);
+    } else {
+        
+        echo "Data tidak ditemukan untuk id: $id dan nomor: $nomor";
+        exit;
+    }
 
     $sql = "UPDATE pcaktif SET 
                 tgl_update = ?, 
@@ -59,12 +208,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 cassing = ?, 
                 dvd = ?, 
                 seri = ?, 
-                bulan = ?
+                bulan = ?,
+                keterangan = ?
             WHERE id = ? AND nomor = ?";
     
     $params = [$tgl_update, $divisi, $bagian, $subbagian, $lokasi, $user, $idpc, $namapc, 
                $os, $ippc, $harddisk, $ram, $monitor, $model, $ram1, $ram2, $hd1, $hd2, 
-               $mobo, $prosesor, $powersuply, $cassing, $dvd, $seri, $bulan, $id, $nomor];
+               $mobo, $prosesor, $powersuply, $cassing, $dvd, $seri, $bulan, $keterangan, $id, $nomor];
 
     $stmt = sqlsrv_query($conn, $sql, $params);
 

@@ -341,6 +341,13 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+
+                    Keterangan 
+                    <textarea cols="45" rows="7" name="keterangan" class="form-control" size="15px" placeholder="" required="required"><?php echo htmlspecialchars($keterangan); ?></textarea>
+               
+                </div>
+
                 <input type="hidden" name="id" value="<?php echo $id; ?>">
                 <input type="hidden" name="nomor" value="<?php echo $nomor; ?>">
                 <button name="tombol" id="button_selesai" class="btn btn-danger" type="submit">Simpan</button>

@@ -26,12 +26,12 @@ if ($response === false) {
 curl_close($ch);
 
 // Periksa apakah id dan nomor dikirim melalui POST
-if (isset($_POST['id']) && isset($_POST['nomor'])) {
-    $id = $_POST['id'];
+if ( isset($_POST['nomor'])) {
+    
     $nomor = $_POST['nomor'];
 
-    $sql = "SELECT * FROM pcaktif WHERE id = ? AND nomor = ?";
-    $params = [$id, $nomor];
+    $sql = "SELECT * FROM pcaktif WHERE  idpc = ?";
+    $params = [$nomor];
     $stmt = sqlsrv_query($conn, $sql, $params);
 
     if ($stmt === false) {
@@ -78,7 +78,7 @@ if (isset($_POST['id']) && isset($_POST['nomor'])) {
 
         $tglupdate = ($tgl_update instanceof DateTime) ? $tgl_update->format('Y-m-d') : substr($tgl_update, 0, 10);
     } else {
-        echo "Data tidak ditemukan untuk id: $id dan nomor: $nomor";
+        echo "Data tidak ditemukan untuk  nomor: $nomor";
         exit;
     }
 } else {

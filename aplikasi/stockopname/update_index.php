@@ -10,88 +10,89 @@
 </head>
 <body>
     <h4 align="center">UPDATE SPESIFIKASI STOCK OPNAME</h4>
-    <div id="info_transaksi">
+    
         <form method="post" action="aplikasi/stockopname/actionstop/save_update_stockop.php" enctype="multipart/form-data" name="postform2">
-            <div class="form-group">
-                Tanggal Service<br>
-                <input required value="<?php echo $tglupdate; ?>" type="text" id="from" name="tgl_update" class="isi_tabel" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
-                <a href="javascript:void(0)" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
-                    <img name="popcal" align="absmiddle" style="border:none" src="/simitdlPHP8/calender/calender.jpeg" width="34" height="29" border="0" alt="">
-                </a>
-            </div>
-
-            <div class="form-group">
-                Divisi
-                <select class="form-control" name="divisi" required>
-                    <option value="<?php echo $divisi; ?>"><?php echo $divisi; ?></option>
-                    <option value="AMBASADOR">AMBASADOR</option>
-                    <option value="EFRATA">EFRATA</option>
-                    <option value="GARMENT">GARMENT</option>
-                    <option value="MAS">MAS</option>
-                    <option value="TEXTILE">TEXTILE</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                Bagian
-                <select class="form-control" name="bagian" required>
-                    <option value="<?php echo $bagian; ?>"><?php echo $bagian; ?></option>
-                    <?php
-                    $query = "SELECT * FROM bagian_pemakai ORDER BY bag_pemakai ASC";
-                    $stmt = sqlsrv_query($conn, $query);
-                    while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                        echo '<option value="' . $datas['bag_pemakai'] . '">' . $datas['bag_pemakai'] . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                Sub Bagian
-                <select class="form-control" name="subbagian" required>
-                    <option value="<?php echo $subbagian; ?>"><?php echo $subbagian; ?></option>
-                    <?php
-                    $query = "SELECT * FROM sub_bagian ORDER BY subbag_nama ASC";
-                    $stmt = sqlsrv_query($conn, $query);
-                    while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                        echo '<option value="' . $datas['subbag_nama'] . '">' . $datas['subbag_nama'] . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                Lokasi
-                <select class="form-control" name="lokasi" required>
-                    <option value="<?php echo $lokasi; ?>"><?php echo $lokasi; ?></option>
-                    <?php
-                    $query = "SELECT * FROM lokasi ORDER BY lokasi_nama ASC";
-                    $stmt = sqlsrv_query($conn, $query);
-                    while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                        echo '<option value="' . $datas['lokasi_nama'] . '">' . $datas['lokasi_nama'] . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                User
-                <input class="form-control" type="text" name="user" value="<?php echo $user; ?>">
-            </div>
-
-            <div class="form-group">
-                ID Komputer
-                <input class="form-control" type="text" name="idpc" value="<?php echo $idpc; ?>">
-            </div>
-
-            <div class="form-group">
-                Nama Komputer
-                <input class="form-control" type="text" name="namapc" value="<?php echo $namapc; ?>">
-            </div>
-        </div>
+            
+     
 
         <div id="data_barang">
             <div class="panel-body">
+                <div class="form-group">
+                    Tanggal Service<br>
+                    <input required value="<?php echo $tglupdate; ?>" type="text" id="from" name="tgl_update" class="isi_tabel" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
+                    <a href="javascript:void(0)" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
+                        <img name="popcal" align="absmiddle" style="border:none" src="/simitdlPHP8/calender/calender.jpeg" width="34" height="29" border="0" alt="">
+                    </a>
+                </div>
+
+                <div class="form-group">
+                    Divisi
+                    <select class="form-control" name="divisi" required>
+                        <option value="<?php echo $divisi; ?>"><?php echo $divisi; ?></option>
+                        <option value="AMBASADOR">AMBASADOR</option>
+                        <option value="EFRATA">EFRATA</option>
+                        <option value="GARMENT">GARMENT</option>
+                        <option value="MAS">MAS</option>
+                        <option value="TEXTILE">TEXTILE</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    Bagian
+                    <select class="form-control" name="bagian" required>
+                        <option value="<?php echo $bagian; ?>"><?php echo $bagian; ?></option>
+                        <?php
+                        $query = "SELECT * FROM bagian_pemakai ORDER BY bag_pemakai ASC";
+                        $stmt = sqlsrv_query($conn, $query);
+                        while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                            echo '<option value="' . $datas['bag_pemakai'] . '">' . $datas['bag_pemakai'] . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    Sub Bagian
+                    <select class="form-control" name="subbagian" required>
+                        <option value="<?php echo $subbagian; ?>"><?php echo $subbagian; ?></option>
+                        <?php
+                        $query = "SELECT * FROM sub_bagian ORDER BY subbag_nama ASC";
+                        $stmt = sqlsrv_query($conn, $query);
+                        while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                            echo '<option value="' . $datas['subbag_nama'] . '">' . $datas['subbag_nama'] . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    Lokasi
+                    <select class="form-control" name="lokasi" required>
+                        <option value="<?php echo $lokasi; ?>"><?php echo $lokasi; ?></option>
+                        <?php
+                        $query = "SELECT * FROM lokasi ORDER BY lokasi_nama ASC";
+                        $stmt = sqlsrv_query($conn, $query);
+                        while ($datas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                            echo '<option value="' . $datas['lokasi_nama'] . '">' . $datas['lokasi_nama'] . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    User
+                    <input class="form-control" type="text" name="user" value="<?php echo $user; ?>">
+                </div>
+
+                <div class="form-group">
+                    ID Komputer
+                    <input class="form-control" type="text" name="idpc" value="<?php echo $idpc; ?>">
+                </div>
+
+                <div class="form-group">
+                    Nama Komputer
+                    <input class="form-control" type="text" name="namapc" value="<?php echo $namapc; ?>">
+                </div>
                 <div class="form-group">
                     <b>Operation System</b>
                     <input class="form-control" type="text" name="os" value="<?php echo $os; ?>">
@@ -340,6 +341,13 @@
                         }
                         ?>
                     </select>
+                </div>
+
+                <div class="form-group">
+
+                    Keterangan 
+                    <textarea cols="45" rows="7" name="keterangan" class="form-control" size="15px" placeholder="" required="required"><?php echo htmlspecialchars($keterangan); ?></textarea>
+               
                 </div>
 
                 <input type="hidden" name="id" value="<?php echo $id; ?>">
