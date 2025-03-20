@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code Scanner</title>
-    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
     <style>
-         body {
+        body {
             text-align: center;
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
@@ -17,13 +17,16 @@
             display: inline-block;
         }
         video {
-            width: 300px;  /* 🔹 Ubah ke persegi */
-            height: 300px; /* 🔹 Ubah ke persegi */
+            width: 300px;
+            height: 300px;
             border: 3px solid blue;
-            object-fit: cover; /* 🔹 Pastikan proporsi tetap */
+            object-fit: cover;
+        }
+        canvas {
+            display: none;
         }
 
-
+        /* ✅ Kotak Siku Panduan */
         .scan-box {
             position: absolute;
             top: 50%;
@@ -31,55 +34,18 @@
             width: 200px;
             height: 200px;
             transform: translate(-50%, -50%);
-            
-            display: none;
-            justify-content: center;
-            align-items: center;
+            border: 2px dashed white;
         }
-        /* Pastikan scanBox muncul dengan transisi */
-        .scan-box.active {
-            display: flex;
-        }
-
-        /* Sudut Siku */
-        .scan-box .corner {
+        .corner {
             position: absolute;
             width: 20px;
             height: 20px;
-            border: 5px solid green;
+            border: 4px solid green;
         }
-
-        /* Sudut Kiri Atas */
-        .scan-box .corner.top-left {
-            top: -3px;
-            left: -3px;
-            border-right: none;
-            border-bottom: none;
-        }
-
-        /* Sudut Kanan Atas */
-        .scan-box .corner.top-right {
-            top: -3px;
-            right: -3px;
-            border-left: none;
-            border-bottom: none;
-        }
-
-        /* Sudut Kiri Bawah */
-        .scan-box .corner.bottom-left {
-            bottom: -3px;
-            left: -3px;
-            border-right: none;
-            border-top: none;
-        }
-
-        /* Sudut Kanan Bawah */
-        .scan-box .corner.bottom-right {
-            bottom: -3px;
-            right: -3px;
-            border-left: none;
-            border-top: none;
-        }
+        .corner.top-left { top: 0; left: 0; border-right: none; border-bottom: none; }
+        .corner.top-right { top: 0; right: 0; border-left: none; border-bottom: none; }
+        .corner.bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; }
+        .corner.bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; }
 
     </style>
 </head>
@@ -88,27 +54,24 @@
     <h2>Scan QR Code</h2>
 
     <div class="scanner-container">
-        <video id="preview"></video>
-        <div class="scan-box" id="scanBox">
+        <video id="preview" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+
+        <!-- ✅ Kotak Siku Panduan -->
+        <div class="scan-box">
             <div class="corner top-left"></div>
             <div class="corner top-right"></div>
             <div class="corner bottom-left"></div>
             <div class="corner bottom-right"></div>
-
-        </div> 
-        <!-- <br>
-        <button class="btn btn-primary" onclick="startScanner()">Mulai Scan</button>
-        <br> -->
-    
+        </div>
     </div>
 
-        <br>
-        <br>
-        <br>
+    <br><br>
+
     <div class="scanner-container">
         <form action="user.php?menu=updatestockopscan" method="POST">
             <input type="text" name="nomor" id="nomor" readonly required>
-            <button type="submit" class="btn btn-primary" >Submit QR Code</button>
+            <button type="submit" class="btn btn-primary">Submit QR Code</button>
         </form>
     </div>
 
@@ -118,55 +81,46 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            startScanner(); // 🚀 Otomatis aktifkan kamera saat halaman terbuka
+            startScanner();
         });
-
-        let scanner;
 
         async function startScanner() {
             try {
-                let videoElement = document.getElementById('preview');
-                let scanBox = document.getElementById("scanBox");
+                const video = document.getElementById('preview');
+                const canvasElement = document.getElementById('canvas');
+                const canvas = canvasElement.getContext("2d");
 
-                // **🔹 1. Minta akses kamera**
-                let stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
 
-                // **🔹 2. Tampilkan scanBox jika kamera berhasil diakses**
-                scanBox.classList.add("active");
+                function scanQRCode() {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvasElement.width = video.videoWidth;
+                        canvasElement.height = video.videoHeight;
+                        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                        
+                        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                            inversionAttempts: "dontInvert",
+                        });
 
-                scanner = new Instascan.Scanner({ video: videoElement });
-
-                scanner.addListener('scan', function(content) {
-                    document.getElementById('nomor').value = content;
-                    let sound = document.getElementById("scanSound");
-                    sound.play();
-                });
-
-                // **🔹 3. Pilih Kamera & Perbaiki Mirroring**
-                Instascan.Camera.getCameras().then(function (cameras) {
-                    if (cameras.length > 1) {
-                        scanner.start(cameras[1]);
-                        videoElement.style.transform = "none"; // 🚀 Hilangkan mirroring untuk kamera belakang
-                    } else if (cameras.length > 0) {
-                        scanner.start(cameras[0]);
-                        videoElement.style.transform = "scaleX(-1)"; // 🔄 Mirror untuk kamera depan
-                    } else {
-                        alert("Tidak ada kamera yang ditemukan!");
-                        scanBox.classList.remove("active"); // 🚨 Sembunyikan scanBox jika tidak ada kamera
+                        if (code) {
+                            if (document.getElementById('nomor').value !== code.data) {
+                                document.getElementById('nomor').value = code.data;
+                                document.getElementById("scanSound").play();
+                            }
+                        }
                     }
-                }).catch(function (e) {
-                    console.error("Gagal mengakses kamera:", e);
-                    scanBox.classList.remove("active"); // 🚨 Sembunyikan scanBox jika gagal
-                });
+                    requestAnimationFrame(scanQRCode);
+                }
 
+                requestAnimationFrame(scanQRCode);
             } catch (error) {
                 alert("Gagal mengakses kamera: " + error.message);
                 console.error(error);
-                document.getElementById("scanBox").classList.remove("active"); // 🚨 Sembunyikan scanBox jika error
             }
         }
     </script>
-
 
 </body>
 </html>

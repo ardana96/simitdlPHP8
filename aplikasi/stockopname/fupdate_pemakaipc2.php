@@ -103,11 +103,12 @@ border:1px;
                             <tbody id="dataBodys">
                             <?php
                             if (sqlsrv_has_rows($stmt)) {
+                                $no=1;
                                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                                     $tgl_update = $row['modifiedDate'] ? $row['modifiedDate']->format('Y-m-d') : '-';
                                     ?>
                                    <tr>
-                                        <td><?php echo $row['nomor'] ?></td>
+                                        <td><?php echo $no++ ?></td>
                                         <td><?php echo $row['ippc'] ?></td>
                                         <td><?php echo $row['idpc'] ?></td>
                                         <td><?php echo $row['user'] ?></td>

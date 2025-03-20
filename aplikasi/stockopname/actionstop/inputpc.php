@@ -17,60 +17,106 @@ border:1px;
 	background-color: #FFF;}
 </style>
 <?php
-$datee=date('Y-m-d');
- $jam = date("H:i");
-$date=date('Y-m-d');
+// $datee=date('Y-m-d');
+//  $jam = date("H:i");
+// $date=date('Y-m-d');
+// function kdauto($tabel, $inisial) {
+//     global $conn;
+//     $query_struktur = "
+//     WITH ColumnInfo AS (
+//         SELECT 
+//             COLUMN_NAME,
+//             ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
+//             CHARACTER_MAXIMUM_LENGTH  AS Columnlength
+//         FROM INFORMATION_SCHEMA.COLUMNS
+//         WHERE TABLE_NAME = ?
+//     )
+//     SELECT 
+//         Columnlength AS TotalColumns,
+//         COLUMN_NAME AS SecondColumnName
+//     FROM ColumnInfo
+//     WHERE RowNum = 2;
+//     ";
+//     $params_struktur = array($tabel);
+//     $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
+//     if ($stmt_struktur === false) {
+//         die(print_r(sqlsrv_errors(), true));
+//     }
+//     $field = null;
+//     $maxLength = null;
+//     if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
+//         $field = $row['SecondColumnName'];
+//         $maxLength = $row['TotalColumns'] ?? $maxLength;
+//     }
+//     sqlsrv_free_stmt($stmt_struktur);
+//     if ($field === null) {
+//         die("Kolom tidak ditemukan pada tabel: $tabel");
+//     }
+//     $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
+//     $stmt_max = sqlsrv_query($conn, $query_max);
+//     if ($stmt_max === false) {
+//         die(print_r(sqlsrv_errors(), true));
+//     }
+//     $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
+//     $angka = 0;
+//     if (!empty($row['maxKode'])) {
+//         $angka = (int) substr($row['maxKode'], strlen($inisial));
+//     }
+//     $angka++;
+//     sqlsrv_free_stmt($stmt_max);
+//     $padLength = $maxLength - strlen($inisial);
+//     if ($padLength <= 0) {
+//         die("Panjang padding tidak valid untuk kolom: $field");
+//     }
+//     return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT);
+//}
+
+
 function kdauto($tabel, $inisial) {
     global $conn;
-    $query_struktur = "
-    WITH ColumnInfo AS (
-        SELECT 
-            COLUMN_NAME,
-            ROW_NUMBER() OVER (ORDER BY ORDINAL_POSITION) AS RowNum,
-            CHARACTER_MAXIMUM_LENGTH  AS Columnlength
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = ?
-    )
-    SELECT 
-        Columnlength AS TotalColumns,
-        COLUMN_NAME AS SecondColumnName
-    FROM ColumnInfo
-    WHERE RowNum = 2;
-    ";
-    $params_struktur = array($tabel);
-    $stmt_struktur = sqlsrv_query($conn, $query_struktur, $params_struktur);
-    if ($stmt_struktur === false) {
+
+    // Ambil nomor terbesar dari tabel, pastikan hanya numerik
+    $query = "SELECT MAX(CAST(nomor AS INT)) AS last_nomor 
+              FROM $tabel 
+              WHERE nomor NOT LIKE '%[^0-9]%' 
+                AND nomor IS NOT NULL";
+    $stmt = sqlsrv_query($conn, $query);
+
+    if ($stmt === false) {
         die(print_r(sqlsrv_errors(), true));
     }
-    $field = null;
-    $maxLength = null;
-    if ($row = sqlsrv_fetch_array($stmt_struktur, SQLSRV_FETCH_ASSOC)) {
-        $field = $row['SecondColumnName'];
-        $maxLength = $row['TotalColumns'] ?? $maxLength;
+
+    $last_nomor = null;
+    if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        $last_nomor = $row['last_nomor'];
     }
-    sqlsrv_free_stmt($stmt_struktur);
-    if ($field === null) {
-        die("Kolom tidak ditemukan pada tabel: $tabel");
+    sqlsrv_free_stmt($stmt);
+
+    // Debugging: Tampilkan nomor terakhir yang ditemukan
+    // echo "Nomor terakhir (sebelum +1): " . ($last_nomor ?? 'null') . "<br>";
+
+    // Jika tidak ada nomor sebelumnya, mulai dari 0
+    if ($last_nomor === null) {
+        $last_nomor = 0;
     }
-    $query_max = "SELECT MAX($field) AS maxKode FROM $tabel";
-    $stmt_max = sqlsrv_query($conn, $query_max);
-    if ($stmt_max === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
-    $row = sqlsrv_fetch_array($stmt_max, SQLSRV_FETCH_ASSOC);
-    $angka = 0;
-    if (!empty($row['maxKode'])) {
-        $angka = (int) substr($row['maxKode'], strlen($inisial));
-    }
-    $angka++;
-    sqlsrv_free_stmt($stmt_max);
-    $padLength = $maxLength - strlen($inisial);
-    if ($padLength <= 0) {
-        die("Panjang padding tidak valid untuk kolom: $field");
-    }
-    return  $inisial. str_pad($angka, $padLength, "0", STR_PAD_LEFT);
+
+    // Tambah 1 ke nomor terbesar
+    $next_nomor_int = $last_nomor + 1;
+
+    // Buat nomor dengan padding 5 digit untuk penyimpanan
+    $padded_nomor = str_pad($next_nomor_int, 5, "0", STR_PAD_LEFT);
+    // Tampilkan tanpa padding
+    $display_nomor = $inisial . $next_nomor_int;
+
+    // Debugging: Tampilkan nomor
+    // echo "Nomor berikutnya (untuk penyimpanan): " . $padded_nomor . "<br>";
+    // echo "Nomor berikutnya (untuk tampilan): " . $display_nomor . "<br>";
+
+    // Kembalikan nomor untuk tampilan (tanpa padding)
+    return $display_nomor;
 }
-$no_faktur=kdauto("tpengambilan",'');
+
+$no_faktur=kdauto("pcaktif",'');
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -139,9 +185,14 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 </head>
 <body onload="document.getElementById('kd_barang').focus()">
 	<h4 align='center'>UPDATE SPESIFIKASI PC</h4>
-	<div id="info_transaksi">
+
       	<form id="form_penjualan"  method="post" action="aplikasi/stockopname/modal/simpaninputpc.php" enctype="multipart/form-data" name="postform2" >
-	  	Nomor
+
+
+	<div style="overflow:scroll;width:600px;height:1500px;" id="data_barang">
+	                           <div class="panel-body">
+
+							   Nomor
 	  	<input  readonly class="form-control"  type="text" name="nomoroke" value="<?php echo kdauto("pcaktif",""); ?>" >
         Divisi                                    
        <select class="form-control" name="divisi" required='required'>
@@ -238,9 +289,6 @@ document.location.href="aplikasi/simpanrincipengeluaran.php?kd_barang="+kd_baran
 		Nama Komputer
 		<input  class="form-control"  type="text" name="namapc">                                     
 		<br>
-    </div>
-	<div style="overflow:scroll;width:600px;height:500px;" id="data_barang">
-	                           <div class="panel-body">
 	   <div class="form-group">
  <b>Operation System</b>         
         <input  class="form-control"  type="text" name="os" >

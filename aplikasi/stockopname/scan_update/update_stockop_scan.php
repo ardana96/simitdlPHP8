@@ -4,7 +4,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Sesuaikan path inklusi config.php
-include(dirname(dirname(dirname(__FILE__))) . '/config.php');
+include(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
 
 // Panggil save_lastpage.php untuk menyimpan status saat ini sebelum menampilkan form
 $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
