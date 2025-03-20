@@ -7,44 +7,42 @@ if (!$conn) {
     die("Koneksi database gagal: " . print_r(sqlsrv_errors(), true));
 }
 
-// Ambil perangkat_id dari parameter GET dengan validasi ketat
-if (!isset($_GET['perangkat_id']) || trim($_GET['perangkat_id']) === '' || trim($_GET['perangkat_id']) === 'null' || !is_numeric($_GET['perangkat_id'])) {
-    die("Perangkat ID tidak valid.");
+// Ambil dan validasi parameter GET
+if (!isset($_GET['perangkat_id']) || empty(trim($_GET['perangkat_id'])) || !is_numeric($_GET['perangkat_id'])) {
+    echo "<p>ID perangkat tidak valid.</p>";
+    exit;
 }
 $perangkat_id = (int)$_GET['perangkat_id'];
 
-$idpc = $_GET['idpc'] ?? '';
+$idpc = isset($_GET['idpc']) ? trim($_GET['idpc']) : ''; // String kosong sebagai default
 
-if (!isset($_GET['tahun']) || trim($_GET['tahun']) === '' || trim($_GET['tahun']) === 'null' || !is_numeric($_GET['tahun'])) {
-    die("Tahun tidak valid.");
+if (!isset($_GET['tahun']) || !is_numeric(trim($_GET['tahun']))) {
+    echo "<p>Tahun tidak valid.</p>";
+    exit;
 }
-$tahun = $_GET['tahun']; // Biarkan sebagai string karena kolom tahun adalah VARCHAR
+$tahun = trim($_GET['tahun']); // Biarkan sebagai string karena VARCHAR
 
-$bulan = isset($_GET['bulan']) && preg_match('/^(0[1-9]|1[0-2])$/', $_GET['bulan']) ? $_GET['bulan'] : '01';
+// Default bulan ke '01' jika tidak valid, khususnya untuk 24/25
+$bulan = isset($_GET['bulan']) && preg_match('/^(0[1-9]|1[0-2])$/', $_GET['bulan']) ? trim($_GET['bulan']) : '01';
 
-// Debugging
-error_log("Raw perangkat_id: " . var_export($_GET['perangkat_id'], true) . ", Type: " . gettype($_GET['perangkat_id']));
-error_log("Raw tahun: " . var_export($_GET['tahun'], true) . ", Type: " . gettype($_GET['tahun']));
-error_log("Converted perangkat_id: $perangkat_id, Type: " . gettype($perangkat_id));
-error_log("Converted tahun: $tahun, Type: " . gettype($tahun));
+// Log untuk debugging
 error_log("Parameters: perangkat_id=$perangkat_id, idpc=$idpc, tahun=$tahun, bulan=$bulan");
-error_log("Raw GET data: " . print_r($_GET, true));
 
-// Inisialisasi array parameter untuk prepared statement
+// Tentukan query berdasarkan perangkat_id
 if ($perangkat_id == 24 || $perangkat_id == 25) {
     $query = "SELECT id, nama_perawatan, 
               (SELECT COUNT(*) FROM perawatan 
                WHERE perawatan.idpc = ? 
                AND tahun = ? 
                AND bulan = ? 
-               AND perawatan.tipe_perawatan_item_id = tipe_perawatan_item.id  
+               AND perawatan.tipe_perawatan_item_id = tipe_perawatan_item.id 
                AND perawatan.tipe_perawatan_id = ?) AS hitung 
               FROM tipe_perawatan_item 
               WHERE tipe_perawatan_id = ?";
     $params = array(
-        array($idpc, SQLSRV_PARAM_IN),
-        array($tahun, SQLSRV_PARAM_IN), // Kolom tahun adalah VARCHAR, jadi biarkan sebagai string
-        array($bulan, SQLSRV_PARAM_IN),
+        array($idpc, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING(SQLSRV_ENC_CHAR)),
+        array($tahun, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING(SQLSRV_ENC_CHAR)),
+        array($bulan, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING(SQLSRV_ENC_CHAR)),
         array($perangkat_id, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_INT),
         array($perangkat_id, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_INT)
     );
@@ -53,53 +51,52 @@ if ($perangkat_id == 24 || $perangkat_id == 25) {
               (SELECT COUNT(*) FROM perawatan 
                WHERE perawatan.idpc = ? 
                AND YEAR(tanggal_perawatan) = ? 
-               AND perawatan.tipe_perawatan_item_id = tipe_perawatan_item.id  
+               AND perawatan.tipe_perawatan_item_id = tipe_perawatan_item.id 
                AND perawatan.tipe_perawatan_id = ?) AS hitung 
               FROM tipe_perawatan_item 
               WHERE tipe_perawatan_id = ?";
     $params = array(
-        array($idpc, SQLSRV_PARAM_IN),
-        array($tahun, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_INT), // YEAR() menghasilkan INT
+        array($idpc, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING(SQLSRV_ENC_CHAR)),
+        array((int)$tahun, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_INT), // Konversi ke int untuk YEAR()
         array($perangkat_id, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_INT),
         array($perangkat_id, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_INT)
     );
 }
 
-// Persiapkan dan eksekusi query dengan prepared statement
+// Persiapkan dan eksekusi query
 $stmt = sqlsrv_prepare($conn, $query, $params);
 if ($stmt === false) {
     die("Persiapan query gagal: " . print_r(sqlsrv_errors(), true));
 }
 
-if (sqlsrv_execute($stmt)) {
-    $rowCount = 0;
-    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        if ($row === false) {
-            error_log("Gagal mengambil data: " . print_r(sqlsrv_errors(), true));
-            continue;
-        }
-        $rowCount++;
-        echo "<div class='form-group'>";
-        echo "<label>";
-        if ($row['hitung'] > 0) {
-            echo "<input type='checkbox' name='selected_items[]' value='" . htmlspecialchars($row['id'], ENT_QUOTES, 'UTF-8') . "' checked> " . htmlspecialchars($row['nama_perawatan'], ENT_QUOTES, 'UTF-8');
-        } else {
-            echo "<input type='checkbox' name='selected_items[]' value='" . htmlspecialchars($row['id'], ENT_QUOTES, 'UTF-8') . "'> " . htmlspecialchars($row['nama_perawatan'], ENT_QUOTES, 'UTF-8');
-        }
-        echo "</label>";
-        echo "</div>";
-    }
-    if ($rowCount == 0) {
-        error_log("Tidak ada data ditemukan untuk perangkat_id: $perangkat_id, idpc: $idpc, tahun: $tahun, bulan: $bulan");
-        echo "<p>Data tidak ditemukan untuk perangkat yang dipilih.</p>";
-    }
-} else {
+// Log sebelum eksekusi
+error_log("Query: $query");
+error_log("Params: " . print_r($params, true));
+
+if (sqlsrv_execute($stmt) === false) {
     die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
 }
 
-// Bebaskan resource statement
-sqlsrv_free_stmt($stmt);
+// Tampilkan hasil
+$rowCount = 0;
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $rowCount++;
+    echo "<div class='form-group'>";
+    echo "<label>";
+    if ($row['hitung'] > 0) {
+        echo "<input type='checkbox' name='selected_items[]' value='" . htmlspecialchars($row['id'], ENT_QUOTES, 'UTF-8') . "' checked> " . htmlspecialchars($row['nama_perawatan'], ENT_QUOTES, 'UTF-8');
+    } else {
+        echo "<input type='checkbox' name='selected_items[]' value='" . htmlspecialchars($row['id'], ENT_QUOTES, 'UTF-8') . "'> " . htmlspecialchars($row['nama_perawatan'], ENT_QUOTES, 'UTF-8');
+    }
+    echo "</label>";
+    echo "</div>";
+}
 
-// Tutup koneksi
+if ($rowCount == 0) {
+    echo "<p>Data tidak ditemukan untuk perangkat yang dipilih.</p>";
+}
+
+// Bebaskan resource dan tutup koneksi
+sqlsrv_free_stmt($stmt);
 sqlsrv_close($conn);
 ?>
