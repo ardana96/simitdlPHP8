@@ -310,7 +310,8 @@
                 data: { 
                     idpc: data.idpc,
                     perangkat_id: perangkatValue,
-                    tahun: tahunValue
+                    tahun: tahunValue,
+                    bulan: $("select[name='bulan']").val() // Tambahkan parameter bulan
                 },
                 success: function(response) {
                     $('#modalCheckboxes').html(response);

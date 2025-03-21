@@ -39,7 +39,7 @@ if (!empty($_GET['perangkat'])) {
     sqlsrv_free_stmt($stmtQry);
 
     // Query untuk menghitung jumlah perawatan
-    $qryItem = "SELECT id as jumlahperawatan FROM tipe_perawatan_item WHERE tipe_perawatan_id = ?";
+    $qryItem = "SELECT Count(*) as jumlahperawatan FROM tipe_perawatan_item WHERE tipe_perawatan_id = ?";
     $stmtItem = sqlsrv_prepare($conn, $qryItem, [$perangkat]);
     if ($stmtItem === false) {
         die("Persiapan query gagal: " . print_r(sqlsrv_errors(), true));
@@ -47,11 +47,15 @@ if (!empty($_GET['perangkat'])) {
     if (!sqlsrv_execute($stmtItem)) {
         die("Eksekusi query gagal: " . print_r(sqlsrv_errors(), true));
     }
-    $jumlahperawatan = sqlsrv_num_rows($stmtItem);
+    //$jumlahperawatan = sqlsrv_num_rows($stmtItem);
+    $row = sqlsrv_fetch_array($stmtItem, SQLSRV_FETCH_ASSOC);
+    $jumlahperawatan = $row['jumlahperawatan'] ?? 0;
     // Jika tidak ada item perawatan, set default minimal 1 perawatan
-    if ($jumlahperawatan == 0) {
-        $jumlahperawatan = 1; // Default minimal 1 perawatan
-    }
+    // if ($jumlahperawatan == 0) {
+    //     $jumlahperawatan = 1; // Default minimal 1 perawatan
+    // }
+    // echo "Jumlah perawatan: " . $jumlahperawatan . "<br>";
+    // echo "Perangkat: " . $perangkat . "<br>";
     sqlsrv_free_stmt($stmtItem);
 
     // Inisialisasi query utama dengan WHERE 1=1 untuk mempermudah penambahan filter
@@ -61,8 +65,8 @@ if (!empty($_GET['perangkat'])) {
                     [user], 
                     lokasi, 
                     model AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND tahun = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND tahun= ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ?) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ?) AS approve_by
@@ -70,8 +74,8 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'printer') {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'printer' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND tahun = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS approve_by
@@ -79,8 +83,8 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'scaner') {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'scaner' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS approve_by
@@ -106,8 +110,8 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun= ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ? ORDER BY id DESC) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS approve_by

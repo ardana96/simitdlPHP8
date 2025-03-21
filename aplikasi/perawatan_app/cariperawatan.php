@@ -67,8 +67,8 @@ if (!empty($_GET['perangkat'])) {
                     [user], 
                     lokasi, 
                     model AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND tahun= ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = pcaktif.idpc AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ?) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = pcaktif.idpc AND tahun = ?) AS approve_by
@@ -76,8 +76,8 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'printer') {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'printer' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND tahun = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = printer.id_perangkat AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = printer.id_perangkat AND tahun = ?) AS approve_by
@@ -85,8 +85,8 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'scaner') {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, 'scaner' AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = scaner.id_perangkat AND tahun = ?) AS approve_by
@@ -94,12 +94,12 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $tahun, $tahun, $tahun, $tahun];
     } else if (strtolower($tipe) == 'ups') {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
-                    (SELECT CASE WHEN EXISTS (
-                        SELECT 1 FROM perawatan 
+                    (
+                        SELECT COUNT(*) FROM perawatan 
                         WHERE perawatan.idpc = peripheral.id_perangkat 
                         AND tahun = ? 
                         AND bulan = ?
-                    ) THEN 1 ELSE 0 END) AS hitung,
+                    )AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS treated_by,
@@ -108,12 +108,12 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else if (strtolower($tipe) == 'server') {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
-                    (SELECT CASE WHEN EXISTS (
-                        SELECT 1 FROM perawatan 
+                     (
+                        SELECT COUNT(*) FROM perawatan 
                         WHERE perawatan.idpc = peripheral.id_perangkat 
                         AND tahun = ? 
                         AND bulan = ?
-                    ) THEN 1 ELSE 0 END) AS hitung,
+                    )  AS hitung,
                     (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND bulan = ? AND tahun = ? ORDER BY id DESC) AS treated_by,
@@ -122,8 +122,8 @@ if (!empty($_GET['perangkat'])) {
         $params = [$tahun, $bulan, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $bulan, $tahun, $tipe];
     } else {
         $query = "SELECT id_perangkat AS idpc, [user], lokasi AS lokasi, tipe AS perangkat,
-                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS hitung,
-                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND YEAR(tanggal_perawatan) = ?) AS tanggal,
+                    (SELECT COUNT(*) FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS hitung,
+                    (SELECT TOP 1 tanggal_perawatan FROM perawatan WHERE perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS tanggal,
                     (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ? ORDER BY id DESC) AS keterangan,
                     (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ? ORDER BY id DESC) AS treated_by,
                     (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = peripheral.id_perangkat AND tahun = ?) AS approve_by
@@ -192,7 +192,7 @@ if ($rowCount > 0) {
 
         // Log untuk debugging
         error_log("Perangkat: " . $row['perangkat'] . ", Hitung: " . $row['hitung'] . ", Target: " . $targetPerawatan);
-
+        echo "Perangkat: " . $row['perangkat'] . ", Hitung: " . $row['hitung'] . ", Target: " . $targetPerawatan;
         // Logika warna berdasarkan tipe perangkat
         if (strtolower($row['perangkat']) == 'switch/router') {
             if ($row['hitung'] > 2) { // Hijau hanya jika lebih dari 2
@@ -209,7 +209,12 @@ if ($rowCount > 0) {
             if ($row['hitung'] >= 4) { // Hijau jika sudah dirawat minimal 1 kali
                 $sudah++;
                 $output .= "<tr style='background-color:#d4edda;'>"; // Hijau: Selesai (>= 1)
-            } else {
+            
+            } else if ($row['hitung'] < 4 && $row['hitung'] > 0) {
+                $sedang++;
+                $output .= "<tr style='background-color:#FFFF00;'>"; // Kuning: Sedang (< target tapi > 0)
+            }
+            else {
                 $belum++;
                 $output .= "<tr>"; // Default: Belum (0)
             }

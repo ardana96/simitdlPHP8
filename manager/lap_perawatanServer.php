@@ -51,25 +51,87 @@ function generatebulan($tgl)
 $bulanGen = generatebulan($bulan);
 $pdf->Header1($bulanGen);
 
-$query = "SELECT 
+// $query = "SELECT 
+//     a.id_perangkat, a.[user] AS user_name, a.divisi AS bagian, b.tipe_perawatan_id, 
+//     CONVERT(VARCHAR, a.tgl_perawatan, 23) AS tgl_perawatan, 
+//     a.lokasi, a.perangkat, CONVERT(VARCHAR, b.tanggal_perawatan, 23) AS tanggal_perawatan, 
+//     (SELECT treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun = ?) AS treated_by, 
+//     (SELECT approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun = ?) AS approve_by,
+//     MAX(CASE WHEN d.nama_perawatan = 'Kondisi OS' THEN 'true' END) AS item1,
+//     MAX(CASE WHEN d.nama_perawatan = 'Kondisi Fisik Server' THEN 'true' END) AS item2,
+//     MAX(CASE WHEN d.nama_perawatan = 'Kondisi Apps' THEN 'true' END) AS item3,
+//     MAX(CASE WHEN d.nama_perawatan = 'Kondisi CPU' THEN 'true' END) AS item4
+// FROM peripheral a
+// LEFT JOIN (SELECT * FROM perawatan WHERE YEAR(tanggal_perawatan) = ?) AS b ON a.id_perangkat = b.idpc
+// LEFT JOIN tipe_perawatan_item d ON b.tipe_perawatan_item_id = d.id
+// WHERE LOWER(a.tipe) = 'server' 
+// AND (a.bulan LIKE ? OR ? = '')
+// AND (a.divisi LIKE ? OR ? = '')
+// GROUP BY a.id_perangkat, a.[user], a.divisi, a.tgl_perawatan, a.lokasi, a.perangkat, b.tipe_perawatan_id, b.tanggal_perawatan";
+
+// $params = [$tahun_rawat, $tahun_rawat, $tahun_rawat, "%$bulan%", $bulan, "%$pdivisi%", $pdivisi];
+
+$query = "
+DECLARE @bulan VARCHAR(2) = ?, 
+        @tahun_rawat VARCHAR(4) = ?;
+
+SELECT 
     a.id_perangkat, a.[user] AS user_name, a.divisi AS bagian, b.tipe_perawatan_id, 
-    CONVERT(VARCHAR, a.tgl_perawatan, 23) AS tgl_perawatan, 
-    a.lokasi, a.perangkat, CONVERT(VARCHAR, b.tanggal_perawatan, 23) AS tanggal_perawatan, 
-    (SELECT treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun = ?) AS treated_by, 
-    (SELECT approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun = ?) AS approve_by,
-    MAX(CASE WHEN d.nama_perawatan = 'Kondisi OS' THEN 'true' END) AS item1,
-    MAX(CASE WHEN d.nama_perawatan = 'Kondisi Fisik Server' THEN 'true' END) AS item2,
-    MAX(CASE WHEN d.nama_perawatan = 'Kondisi Apps' THEN 'true' END) AS item3,
-    MAX(CASE WHEN d.nama_perawatan = 'Kondisi CPU' THEN 'true' END) AS item4
+    --CONVERT(VARCHAR, a.tgl_perawatan, 23) AS tgl_perawatan, 
+
+    CASE 
+        -- Jika bulan ekspor Januari, gunakan tanggal perawatan dari tabel asli
+        WHEN @bulan = '01' 
+        THEN ISNULL(CONVERT(VARCHAR, a.tgl_perawatan, 23), 
+                    ISNULL(CONVERT(VARCHAR, b.tanggal_perawatan, 23), '-')) 
+
+        -- Jika ada realisasi bulan sebelumnya, gunakan tanggal yang sama tetapi ubah bulannya
+        WHEN EXISTS (
+            SELECT 1 
+            FROM perawatan p
+            WHERE p.idpc = a.id_perangkat 
+            AND p.bulan = RIGHT('00' + CAST(@bulan - 1 AS VARCHAR), 2)
+            AND p.tahun = @tahun_rawat
+        ) 
+        THEN 
+            ISNULL(
+                TRY_CONVERT(VARCHAR, 
+                    (SELECT TOP 1 
+                        RIGHT('00' + CAST(DAY(p.tanggal_perawatan) AS VARCHAR), 2) 
+                        + '-' + RIGHT('00' + @bulan, 2) 
+                        + '-' + @tahun_rawat
+                     FROM perawatan p
+                     WHERE p.idpc = a.id_perangkat 
+                     AND p.bulan = RIGHT('00' + CAST(@bulan - 1 AS VARCHAR), 2)
+                     AND p.tahun = @tahun_rawat
+                     ORDER BY p.id DESC
+                    ), 23),
+                '-'
+            )
+        ELSE '-' 
+    END AS tgl_perawatan,
+
+
+
+    a.lokasi, 
+    a.perangkat, 
+    CONVERT(VARCHAR, b.tanggal_perawatan, 23) AS tanggal_perawatan, 
+    (SELECT TOP 1 treated_by FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun = @tahun_rawat  AND bulan = @bulan) AS treated_by, 
+    (SELECT TOP 1 approve_by FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun = @tahun_rawat   AND bulan = @bulan ) AS approve_by,
+    (SELECT TOP 1 ket FROM ket_perawatan WHERE ket_perawatan.idpc = a.id_perangkat AND tahun =  @tahun_rawat   AND bulan = @bulan ) AS ket,
+    MAX(CASE WHEN d.nama_perawatan = 'Kondisi Fisik UPS' THEN 'true' END) AS item1,
+    MAX(CASE WHEN d.nama_perawatan = 'Kondisi Baterai' THEN 'true' END) AS item2,
+    MAX(CASE WHEN d.nama_perawatan = 'Kondisi Lampu Indikator' THEN 'true' END) AS item3,
+    MAX(CASE WHEN d.nama_perawatan = 'Kondisi Alarm' THEN 'true' END) AS item4
 FROM peripheral a
-LEFT JOIN (SELECT * FROM perawatan WHERE YEAR(tanggal_perawatan) = ?) AS b ON a.id_perangkat = b.idpc
+LEFT JOIN (SELECT * FROM perawatan WHERE tahun = @tahun_rawat  and bulan = @bulan) AS b ON a.id_perangkat = b.idpc
 LEFT JOIN tipe_perawatan_item d ON b.tipe_perawatan_item_id = d.id
 WHERE LOWER(a.tipe) = 'server' 
-AND (a.bulan LIKE ? OR ? = '')
+--AND (a.bulan LIKE ? OR ? = '')
 AND (a.divisi LIKE ? OR ? = '')
 GROUP BY a.id_perangkat, a.[user], a.divisi, a.tgl_perawatan, a.lokasi, a.perangkat, b.tipe_perawatan_id, b.tanggal_perawatan";
 
-$params = [$tahun_rawat, $tahun_rawat, $tahun_rawat, "%$bulan%", $bulan, "%$pdivisi%", $pdivisi];
+$params = [$bulan, $tahun_rawat,"%$pdivisi%", $pdivisi];
 $stmt = sqlsrv_query($conn, $query, $params);
 
 if ($stmt === false) {

@@ -102,7 +102,7 @@ if (count($selectedItems) > 0) {
                            WHERE idpc = ? 
                            AND tipe_perawatan_id = ? 
                            AND tipe_perawatan_item_id = ? 
-                           AND YEAR(tanggal_perawatan) = ?";
+                           AND tahun = ?";
             $params_exist = [$idpc, $tipe_perawatan_id, $itemId, $tahun];
         }
 
@@ -123,7 +123,7 @@ if (count($selectedItems) > 0) {
 
         // Debugging: Log hasil cek eksistensi
         error_log("Exist count untuk item $itemId: $exist_count");
-
+        
         if ($exist_count == 0) {
             // Query insert dengan pengecualian
             if ($isServerOrUPS) {
@@ -131,9 +131,9 @@ if (count($selectedItems) > 0) {
                           VALUES (?, ?, ?, ?, ?, ?)";
                 $params = [$idpc, $tipe_perawatan_id, $itemId, $tanggal, $bulan, $tahun];
             } else {
-                $query = "INSERT INTO perawatan (idpc, tipe_perawatan_id, tipe_perawatan_item_id, tanggal_perawatan) 
-                          VALUES (?, ?, ?, ?)";
-                $params = [$idpc, $tipe_perawatan_id, $itemId, $tanggal];
+                $query = "INSERT INTO perawatan (idpc, tipe_perawatan_id, tipe_perawatan_item_id, tanggal_perawatan, tahun) 
+                          VALUES (?, ?, ?, ?, ?)";
+                $params = [$idpc, $tipe_perawatan_id, $itemId, $tanggal, $tahun];
             }
 
             // Debugging: Log query insert

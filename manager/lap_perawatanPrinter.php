@@ -57,7 +57,7 @@ SELECT
 FROM 
     printer a
 LEFT JOIN 
-    (SELECT * FROM perawatan WHERE YEAR(tanggal_perawatan) = ?) AS b ON a.id_perangkat = b.idpc
+    (SELECT * FROM perawatan WHERE tahun = ?) AS b ON a.id_perangkat = b.idpc
 LEFT JOIN  
     tipe_perawatan_item d ON b.tipe_perawatan_item_id = d.id
 WHERE 

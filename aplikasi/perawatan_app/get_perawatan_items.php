@@ -23,10 +23,13 @@ if (!isset($_GET['tahun']) || !is_numeric(trim($_GET['tahun']))) {
 $tahun = trim($_GET['tahun']); // Biarkan sebagai string karena VARCHAR
 
 // Default bulan ke '01' jika tidak valid, khususnya untuk 24/25
-$bulan = isset($_GET['bulan']) && preg_match('/^(0[1-9]|1[0-2])$/', $_GET['bulan']) ? trim($_GET['bulan']) : '01';
+//$bulan = trim($_GET['bulan']);
+$bulan = isset($_GET['bulan']) ? trim($_GET['bulan']) : ''; 
 
 // Log untuk debugging
 error_log("Parameters: perangkat_id=$perangkat_id, idpc=$idpc, tahun=$tahun, bulan=$bulan");
+echo "Parameters: perangkat_id=$perangkat_id, idpc=$idpc, tahun=$tahun, bulan=$bulan";
+
 
 // Tentukan query berdasarkan perangkat_id
 if ($perangkat_id == 24 || $perangkat_id == 25) {
@@ -50,7 +53,8 @@ if ($perangkat_id == 24 || $perangkat_id == 25) {
     $query = "SELECT id, nama_perawatan, 
               (SELECT COUNT(*) FROM perawatan 
                WHERE perawatan.idpc = ? 
-               AND YEAR(tanggal_perawatan) = ? 
+               --AND YEAR(tanggal_perawatan) = ? 
+               AND tahun = ?
                AND perawatan.tipe_perawatan_item_id = tipe_perawatan_item.id 
                AND perawatan.tipe_perawatan_id = ?) AS hitung 
               FROM tipe_perawatan_item 

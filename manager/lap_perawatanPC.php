@@ -120,7 +120,7 @@ $sql = "SELECT
 FROM 
     pcaktif a
 LEFT JOIN 
-    (SELECT * FROM perawatan WHERE YEAR(tanggal_perawatan) = ?) AS b ON a.idpc = b.idpc
+    (SELECT * FROM perawatan WHERE tahun = ?) AS b ON a.idpc = b.idpc
 LEFT JOIN  
     tipe_perawatan_item d ON b.tipe_perawatan_item_id = d.id
 WHERE 
