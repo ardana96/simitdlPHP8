@@ -38,19 +38,22 @@ if (isset($_POST['tombol'])) {
 
     $query = "INSERT INTO pcaktif 
             (nomor, [user], divisi, bagian, subbagian, lokasi, idpc, namapc, ippc, os, prosesor, mobo, monitor, 
-             ram, harddisk, jumlah, bulan, ram1, ram2, hd1, hd2, powersuply, cassing, dvd, model) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+             ram, harddisk, jumlah, bulan, ram1, ram2, hd1, hd2, powersuply, cassing, dvd, model, isDeleted) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
               
     $params = [
         $nomor, $user, $divisi, $bagian, $subbagian, $lokasi, $idpc, $namapc, $ippc, $os, $prosesor, $mobo, 
-        $monitor, $ram, $harddisk, $jumlah, $bulan, $ram1, $ram2, $hd1, $hd2, $powersupply, $cassing, $dvd, $model
+        $monitor, $ram, $harddisk, $jumlah, $bulan, $ram1, $ram2, $hd1, $hd2, $powersupply, $cassing, $dvd, $model, 0
     ];
     
     $stmt = sqlsrv_query($conn, $query, $params);
 
     if ($stmt) {
         // Redirect ke halaman dengan BASE_URL yang sesuai
-        header("Location: $base_url/simitdlPHP8/user.php?menu=stockop&stt=Simpan%20Berhasil");
+        echo "<script>
+            alert('Simpan Berhasil');
+            window.location.href = '$base_url/simitdlPHP8/user.php?menu=stockop&stt=Simpan%20Berhasil';
+          </script>";
         exit();
     } else {
         // Menampilkan error jika query gagal

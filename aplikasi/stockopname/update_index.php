@@ -19,7 +19,7 @@
             <div class="panel-body">
                 <div class="form-group">
                     Tanggal Service<br>
-                    <input required value="<?php echo $tglupdate; ?>" type="text" id="from" name="tgl_update" class="isi_tabel" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
+                    <input value="<?php echo $tglupdate; ?>" type="text" id="from" name="tgl_update" class="isi_tabel" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
                     <a href="javascript:void(0)" onclick="if(self.gfPop)gfPop.fPopCalendar(document.postform2.from);return false;">
                         <img name="popcal" align="absmiddle" style="border:none" src="/simitdlPHP8/calender/calender.jpeg" width="34" height="29" border="0" alt="">
                     </a>

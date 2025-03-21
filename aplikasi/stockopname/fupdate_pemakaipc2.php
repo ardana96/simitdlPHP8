@@ -29,7 +29,58 @@ if (isset($_POST['nomor'], $_POST['id'])) {
     $nomor = $_POST['nomor'];
     $id = $_POST['id'];
 
-    $query = "SELECT * FROM HistoryPcaktif WHERE nomor = ? ";
+    $query = "
+DECLARE @nomor VARCHAR(10) = '30';
+SELECT *
+FROM (
+    -- Mengambil data dari tabel HistoryPcaktif
+    SELECT 
+	nomor,
+        ippc, 
+        idpc, 
+        [user], 
+        namapc, 
+        bagian, 
+        subbagian, 
+        lokasi,
+        prosesor, 
+        mobo, 
+        ram, 
+        harddisk, 
+        bulan, 
+        keterangan, 
+        0 AS LastData,
+		modifiedBy, 
+		modifiedDate,
+		updateFrom
+    FROM HistoryPcaktif 
+  
+    
+    UNION ALL
+    
+    -- Mengambil data dari tabel pcaktif
+    SELECT 
+	nomor,
+        ippc, 
+        idpc, 
+        [user], 
+        namapc, 
+        bagian, 
+        subbagian, 
+        lokasi,
+        prosesor, 
+        mobo, 
+        ram, 
+        harddisk, 
+        bulan, 
+        keterangan, 
+        1 AS LastData,
+		(select Top 1 modifiedBy from HistoryPcaktif where nomor = @nomor Order By id DESC  ) As modifiedBy ,
+		(select Top 1 modifiedDate from HistoryPcaktif where nomor = @nomor Order By id DESC  )  AS modifiedDate,
+		(select Top 1 updateFrom from HistoryPcaktif where nomor = @nomor Order By id DESC  ) AS updateFrom
+    FROM pcaktif 
+) AS datass   WHERE nomor = @nomor Order By LastData";
+   
     $params = [$nomor];
     $stmt = sqlsrv_query($conn, $query, $params);
 
@@ -78,7 +129,7 @@ border:1px;
                 <div class="panel-body">
                     <div id="recordsPerPageContainer"></div>
                     <div class="table-responsive" style='overflow: scroll;'>
-                        <table class="table table-striped table-bordered table-hover" id="dataTables">
+                        <table class="table table-bordered table-hover" id="dataTables">
                             <thead>
                                 <tr>
                                     <th>Nomor</th>
@@ -102,40 +153,45 @@ border:1px;
                             </thead>
                             <tbody id="dataBodys">
                             <?php
-                            if (sqlsrv_has_rows($stmt)) {
-                                $no=1;
-                                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                                    $tgl_update = $row['modifiedDate'] ? $row['modifiedDate']->format('Y-m-d') : '-';
-                                    ?>
-                                   <tr>
-                                        <td><?php echo $no++ ?></td>
-                                        <td><?php echo $row['ippc'] ?></td>
-                                        <td><?php echo $row['idpc'] ?></td>
-                                        <td><?php echo $row['user'] ?></td>
-                                        <td><?php echo $row['namapc'] ?></td>
-                                        <td><?php echo $row['bagian'] ?></td>
-                                        <td><?php echo $row['subbagian'] ?></td>
-                                        <td><?php echo $row['lokasi'] ?></td>
-                                        <td><?php echo $row['prosesor'] ?></td>
-                                        <td><?php echo $row['mobo'] ?></td>
-                                        <td><?php echo $row['ram'] ?></td>
-                                        <td><?php echo $row['harddisk'] ?></td>
-                                        <td><?php echo $row['bulan'] ?></td>
-                                        <td><?php echo $row['modifiedBy'] ?></td>
-                                        <td><?php echo  $tgl_update ?></td>
-                                        <td><?php echo $row['keterangan'] ?></td>
-                                        <td><?php echo $row['updateFrom'] ?></td>
-                                        
-                                    </tr>
-                            <?php     
-                                }
-                            } else {
-                                echo "<tr><td colspan='5'>Data tidak ditemukan.</td></tr>";
-                            }
+                                if (sqlsrv_has_rows($stmt)) {
+                                    $no = 1;
+                                    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                                        $tgl_update = isset($row['modifiedDate']) ? $row['modifiedDate']->format('Y-m-d') : '-';
 
-                            sqlsrv_free_stmt($stmt);
-                            sqlsrv_close($conn);
-                            ?>
+                                        // **Pastikan LastData ada & ubah ke integer untuk perbandingan**
+                                        $rowStyle = (isset($row['LastData']) && intval($row['LastData']) === 1) ? "style='background-color:#d4edda;'" : "";
+                                        ?>
+                                        
+                                        <tr <?php echo $rowStyle; ?>>
+                                            <td><?php echo $no++ ?></td>
+                                            <td><?php echo htmlspecialchars($row['ippc']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['idpc']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['user']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['namapc']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['bagian']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['subbagian']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['lokasi']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['prosesor']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['mobo']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['ram']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['harddisk']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['bulan']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['modifiedBy']); ?></td>
+                                            <td><?php echo $tgl_update; ?></td>
+                                            <td><?php echo htmlspecialchars($row['keterangan']); ?></td>
+                                            <td><?php echo htmlspecialchars($row['updateFrom']); ?></td>
+                                        </tr>
+
+                                        <?php
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='17'>Data tidak ditemukan.</td></tr>";
+                                }
+
+                                // **Bersihkan hasil query & tutup koneksi**
+                                sqlsrv_free_stmt($stmt);
+                                sqlsrv_close($conn);
+                                ?>
                             </tbody>
                         </table>
                     </div>

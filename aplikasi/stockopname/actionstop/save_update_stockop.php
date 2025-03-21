@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $seriHis,
             $session_user,
             $modifiedDate,
-            $keterangan,
+            $keteranganHis,
             $updateFrom
         ];
         $stmtInsertHis = sqlsrv_query($conn, $queryInsertHis, $paramInsertHis);
@@ -250,8 +250,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         error_log("Session dikonfirmasi sebelum redirect: current_page = $currentPage, records_per_page = $recordsPerPage");
 
         // Redirect ke user.php
-        header("Location: $base_url/simitdlPHP8/user.php?menu=stockop");
-        exit;
+        echo "<script>
+            alert('Data Berhasil di Update');
+            window.location.href = '$base_url/simitdlPHP8/user.php?menu=stockop';
+          </script>";
+        exit();
+        // header("Location: $base_url/simitdlPHP8/user.php?menu=stockop");
+        // exit;
     }
 
     sqlsrv_free_stmt($stmt);

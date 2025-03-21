@@ -70,8 +70,9 @@
 
     <div class="scanner-container">
         <form action="user.php?menu=updatestockopscan" method="POST">
-            <input type="text" name="nomor" id="nomor" readonly required>
+            <input type="text" name="nomor" id="nomor"  required> <br> <br>
             <button type="submit" class="btn btn-primary">Submit QR Code</button>
+            <button type="reset" class="btn btn-warning">Reset</button>
         </form>
     </div>
 
